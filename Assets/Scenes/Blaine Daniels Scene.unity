@@ -531,7 +531,7 @@ GameObject:
   - component: {fileID: 1788835502}
   - component: {fileID: 1788835501}
   m_Layer: 0
-  m_Name: Untitled_Artwork_0
+  m_Name: Anger_face_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -622,7 +622,7 @@ GameObject:
   - component: {fileID: 1845678406}
   - component: {fileID: 1845678405}
   m_Layer: 0
-  m_Name: Anger_Face_3_0
+  m_Name: Anger_face_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -713,7 +713,7 @@ GameObject:
   - component: {fileID: 1881558309}
   - component: {fileID: 1881558308}
   m_Layer: 0
-  m_Name: Untitled_Artwork 2_0
+  m_Name: Anger_face_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
