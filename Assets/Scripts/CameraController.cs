@@ -1,58 +1,30 @@
 using UnityEngine;
-using System.Collections.Generic;
-using System.Collections;
 
-
-public class CameraController : MonoBehaviour
+public class MouseLook : MonoBehaviour
 {
-    public CharacterController characterController;
-    public float speed;
-    public float gravity = 9.81f;
-    private Vector3 camRotation;
-    private Transform cam;
-    private Vector3 moveDirection;
+    public float mouseSensitivity = 100f;
+    public Transform playerBody;
 
-    [Range(-45, -15)]
-    public int minAngle = -30;
-    [Range(30, 80)]
-    public int maxAngle = 45;
-    [Range(50, 500)]
-    public int sensitivity = 200;
+    float xRotation = 0f;
 
-    private void Awake()
+    void Start()
     {
-        cam = Camera.main.transform;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     void Update()
     {
-        Move();
-        Rotate();
-    }
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
-    private void Rotate()
-    {
-        transform.Rotate(Vector3.up * sensitivity * Time.deltaTime * Input.GetAxis("Mouse X"));
+        // Vertical rotation (look up/down)
+        xRotation -= mouseY;
+        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
-        camRotation.x -= Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime;
-        camRotation.x = Mathf.Clamp(camRotation.x, minAngle, maxAngle);
+        transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
 
-        cam.localEulerAngles = camRotation;
-    }
-
-    private void Move()
-    {
-        float horizontalMove = Input.GetAxis("Horizontal");
-        float verticalMove = Input.GetAxis("Vertical");
-
-        if (characterController.isGrounded)
-        {
-            moveDirection = new Vector3(horizontalMove, 0, verticalMove);
-            moveDirection = transform.TransformDirection(moveDirection);
-        }
-
-        moveDirection.y += gravity * Time.deltaTime;
-        characterController.Move(moveDirection * speed * Time.deltaTime);
+        // Horizontal rotation (turn player left/right)
+        playerBody.Rotate(Vector3.up * mouseX);
     }
 }
 
