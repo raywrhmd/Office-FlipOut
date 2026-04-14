@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public class PlayerMovement : MonoBehaviour
 {
-    private float speed = 5f;
+    public float speed = 5f;
 
     // Update is called once per frame
     void Update()
