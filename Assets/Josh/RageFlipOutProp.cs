@@ -6,19 +6,13 @@ using System.Collections;
 public class RageFlipOutProp : MonoBehaviour
 {
     [Header("Listening")]
-    [SerializeField] private bool listenForFlipOutBlast = true;
-    [SerializeField, Min(0f)] private float additionalDetectionRadius = 0f;
-    [SerializeField, Range(0f, 1f)] private float reactionChance = 1f;
     [SerializeField, Min(0f)] private float reactionCooldown = 0.1f;
-    [SerializeField] private bool reactOnlyOnce;
 
     [Header("Funny Physics")]
-    [SerializeField] private bool randomizeDirection = true;
     [SerializeField] private Vector2 extraUpImpulseRange = new Vector2(0.5f, 2f);
     [SerializeField] private Vector2 torqueMultiplierRange = new Vector2(0.7f, 1.6f);
 
     [Header("Buildup Shake")]
-    [SerializeField] private bool useBuildupShake = true;
     [SerializeField, Min(0f)] private float buildupDelay = 0.05f;
     [SerializeField, Min(0.05f)] private float buildupDuration = 0.8f;
     [SerializeField, Min(1f)] private float vibrationBurstsPerSecond = 30f;
@@ -28,7 +22,6 @@ public class RageFlipOutProp : MonoBehaviour
     [Header("Optional Overrides")]
     [SerializeField] private Rigidbody targetRigidbody;
 
-    private bool hasReacted;
     private bool isReacting;
     private float lastReactionTime = -999f;
     private Coroutine reactionRoutine;
@@ -60,12 +53,7 @@ public class RageFlipOutProp : MonoBehaviour
 
     private void HandleFlipOutBlast(RageFlipOutBlastData blastData)
     {
-        if (!listenForFlipOutBlast || targetRigidbody == null)
-        {
-            return;
-        }
-
-        if (reactOnlyOnce && hasReacted)
+        if (targetRigidbody == null)
         {
             return;
         }
@@ -80,19 +68,13 @@ public class RageFlipOutProp : MonoBehaviour
             return;
         }
 
-        if (Random.value > reactionChance)
-        {
-            return;
-        }
-
-        float triggerRadius = blastData.Radius + additionalDetectionRadius;
+        float triggerRadius = blastData.Radius;
         float distance = Vector3.Distance(transform.position, blastData.Origin);
         if (distance > triggerRadius)
         {
             return;
         }
 
-        hasReacted = true;
         lastReactionTime = Time.time;
 
         Vector3 direction = transform.position - blastData.Origin;
@@ -101,19 +83,9 @@ public class RageFlipOutProp : MonoBehaviour
             direction = Random.onUnitSphere;
         }
 
-        direction.Normalize();
-        if (randomizeDirection)
-        {
-            direction = (direction + (Random.insideUnitSphere * 0.5f)).normalized;
-        }
+        direction = (direction.normalized + (Random.insideUnitSphere * 0.5f)).normalized;
 
         float falloff = 1f - Mathf.Clamp01(distance / Mathf.Max(0.01f, triggerRadius));
-
-        if (!useBuildupShake)
-        {
-            ApplyLaunch(blastData, direction, falloff);
-            return;
-        }
 
         reactionRoutine = StartCoroutine(BuildupThenLaunch(blastData, direction, falloff));
     }

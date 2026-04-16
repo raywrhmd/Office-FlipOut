@@ -9,11 +9,8 @@ public class Rage_Meter : MonoBehaviour
 {
     [Header("Rage Setup")]
     [SerializeField, Min(1)] private int requiredSignals = 3;
-    [SerializeField] private bool countUniqueSignalsOnly = true;
-    [SerializeField] private bool canFlipOutOnlyOnce = true;
 
     [Header("Signal Listening")]
-    [SerializeField] private bool listenToGlobalSignalHub = true;
     [Tooltip("Optional: only accept global signals targeting this id. Leave empty to accept untargeted signals.")]
     [SerializeField] private string npcSignalId;
 
@@ -48,6 +45,21 @@ public class Rage_Meter : MonoBehaviour
     public int CurrentRage => currentRage;
     public int RequiredSignals => requiredSignals;
     public bool IsFlippedOut => isFlippedOut;
+    public string NpcSignalId => npcSignalId;
+
+    public Sprite CurrentRageFaceSprite
+    {
+        get
+        {
+            if (isFlippedOut && flipOutFaceSprite != null)
+                return flipOutFaceSprite;
+            if (currentRage <= 0 || angerFaceSprites == null || angerFaceSprites.Length == 0)
+                return neutralFaceSprite;
+            float normalized = (float)currentRage / Mathf.Max(1, requiredSignals);
+            int idx = Mathf.Clamp(Mathf.CeilToInt(normalized * angerFaceSprites.Length) - 1, 0, angerFaceSprites.Length - 1);
+            return angerFaceSprites[idx] != null ? angerFaceSprites[idx] : neutralFaceSprite;
+        }
+    }
 
     private readonly HashSet<string> receivedSignalIds = new HashSet<string>();
 
@@ -63,18 +75,12 @@ public class Rage_Meter : MonoBehaviour
 
     private void OnEnable()
     {
-        if (listenToGlobalSignalHub)
-        {
-            RageSignalHub.SignalRaised += HandleGlobalSignal;
-        }
+        RageSignalHub.SignalRaised += HandleGlobalSignal;
     }
 
     private void OnDisable()
     {
-        if (listenToGlobalSignalHub)
-        {
-            RageSignalHub.SignalRaised -= HandleGlobalSignal;
-        }
+        RageSignalHub.SignalRaised -= HandleGlobalSignal;
     }
 
     private void Update()
@@ -148,22 +154,19 @@ public class Rage_Meter : MonoBehaviour
 
     public void AddSignal(string signalId)
     {
-        if (isFlippedOut && canFlipOutOnlyOnce)
+        if (isFlippedOut)
         {
             return;
         }
 
-        if (countUniqueSignalsOnly)
+        if (string.IsNullOrWhiteSpace(signalId))
         {
-            if (string.IsNullOrWhiteSpace(signalId))
-            {
-                signalId = "anonymous_" + (currentRage + 1);
-            }
+            signalId = "anonymous_" + (currentRage + 1);
+        }
 
-            if (!receivedSignalIds.Add(signalId))
-            {
-                return;
-            }
+        if (!receivedSignalIds.Add(signalId))
+        {
+            return;
         }
 
         currentRage = Mathf.Min(currentRage + 1, requiredSignals);
@@ -173,6 +176,16 @@ public class Rage_Meter : MonoBehaviour
         {
             EnterRageState();
         }
+    }
+
+    public bool HasReceivedSignal(string signalId)
+    {
+        if (string.IsNullOrWhiteSpace(signalId))
+        {
+            return false;
+        }
+
+        return receivedSignalIds.Contains(signalId);
     }
 
     public void ResetRage()
@@ -219,7 +232,7 @@ public class Rage_Meter : MonoBehaviour
 
     private void EnterRageState()
     {
-        if (isFlippedOut && canFlipOutOnlyOnce)
+        if (isFlippedOut)
         {
             return;
         }
