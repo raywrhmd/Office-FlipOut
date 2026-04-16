@@ -153,15 +153,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ebe114abb44d493c944cde880157715, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RageFlipOutProp
-  listenForFlipOutBlast: 1
-  additionalDetectionRadius: 0
-  reactionChance: 1
   reactionCooldown: 0.1
-  reactOnlyOnce: 0
-  randomizeDirection: 1
   extraUpImpulseRange: {x: 0.5, y: 2}
   torqueMultiplierRange: {x: 0.7, y: 1.6}
-  useBuildupShake: 1
   buildupDelay: 0.05
   buildupDuration: 0.8
   vibrationBurstsPerSecond: 30
