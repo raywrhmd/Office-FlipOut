@@ -1,0 +1,279 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="ClipboardStyles.uss" />
+    <ui:VisualElement name="ClipboardShell" class="clipboard-shell" picking-mode="Ignore">
+
+        <ui:VisualElement name="Dimmer" class="dimmer" />
+
+        <ui:VisualElement name="Board" class="board">
+            <ui:VisualElement name="BoardShadow" class="board-shadow" picking-mode="Ignore" />
+            <ui:VisualElement class="board-face" picking-mode="Ignore" />
+
+            <ui:Button name="QuitCornerBtn" text="X" class="quit-corner-btn" />
+
+            <ui:VisualElement name="Paper" class="paper">
+
+                <ui:VisualElement name="RuledLines" class="ruled-lines" picking-mode="Ignore" />
+                <ui:VisualElement class="margin-line" picking-mode="Ignore" />
+
+                <ui:VisualElement class="tape-strip tape-top-left" picking-mode="Ignore" />
+                <ui:VisualElement class="tape-strip tape-bottom-right" picking-mode="Ignore" />
+                <ui:VisualElement class="coffee-ring" picking-mode="Ignore" />
+
+                <ui:VisualElement class="paper-content">
+
+                    <ui:VisualElement class="sticky-tabs">
+                        <ui:VisualElement name="TabDirectoryRoot" class="sticky-tab-root tab-yellow tab-active">
+                            <ui:VisualElement class="tab-shadow" picking-mode="Ignore" />
+                            <ui:Button name="TabDirectory" text="Directory" class="sticky-tab-btn" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="TabProgressRoot" class="sticky-tab-root tab-green">
+                            <ui:VisualElement class="tab-shadow" picking-mode="Ignore" />
+                            <ui:Button name="TabProgress" text="Progress" class="sticky-tab-btn" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="TabMapRoot" class="sticky-tab-root tab-blue">
+                            <ui:VisualElement class="tab-shadow" picking-mode="Ignore" />
+                            <ui:Button name="TabMap" text="Map" class="sticky-tab-btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="header">
+                        <ui:Label text="HR CLIPBOARD" class="title" />
+                        <ui:Label text="Employee Observation &amp; Incident Log" class="subtitle" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="top-rule" />
+
+                    <ui:VisualElement name="Content" class="content">
+
+                        <ui:VisualElement name="DirectoryPanel" class="panel">
+
+                            <ui:VisualElement name="DirectoryGridView" class="directory-grid-view">
+                                <ui:VisualElement class="directory-title-row">
+                                    <ui:Label text="EMPLOYEE DIRECTORY" class="directory-title" />
+                                    <ui:Label text="- observe before acting" class="directory-note" />
+                                </ui:VisualElement>
+
+                                <ui:VisualElement name="StaffGrid" class="staff-grid">
+                                    <ui:VisualElement name="Card0" class="staff-card">
+                                        <ui:VisualElement class="card-shadow" picking-mode="Ignore" />
+                                        <ui:VisualElement name="Card0ColorStrip" class="card-color-strip" />
+                                        <ui:VisualElement class="card-inner">
+                                            <ui:VisualElement class="card-name-row">
+                                                <ui:Label name="Card0Name" text="Employee Name" class="card-name" />
+                                                <ui:Label name="Card0Difficulty" text="MEDIUM" class="card-difficulty" />
+                                            </ui:VisualElement>
+                                            <ui:Label name="Card0Role" text="Role Title" class="card-role" />
+                                            <ui:VisualElement name="Card0Portrait" class="card-portrait">
+                                                <ui:VisualElement name="Card0RageFace" class="rage-face-badge" />
+                                            </ui:VisualElement>
+                                            <ui:VisualElement name="Card0StatusBadge" class="status-badge status-active">
+                                                <ui:Label name="Card0StatusText" text="ACTIVE" class="status-text" />
+                                            </ui:VisualElement>
+                                            <ui:VisualElement class="card-separator" />
+                                            <ui:Label name="Card0Dislikes" text="Hates: placeholder, placeholder" class="card-dislikes" />
+                                            <ui:Label name="Card0Location" text="@ Location" class="card-location" />
+                                            <ui:VisualElement name="Card0LockBadge" class="lock-badge hidden">
+                                                <ui:Label name="Card0LockText" class="lock-text" />
+                                            </ui:VisualElement>
+                                        </ui:VisualElement>
+                                        <ui:VisualElement class="card-btn-wrap">
+                                            <ui:Button name="OpenProfile0" text="Open Dossier" class="btn-open-profile" />
+                                        </ui:VisualElement>
+                                        <ui:VisualElement class="push-pin push-pin-left" picking-mode="Ignore" />
+                                    </ui:VisualElement>
+
+                                    <ui:VisualElement name="Card1" class="staff-card">
+                                        <ui:VisualElement class="card-shadow" picking-mode="Ignore" />
+                                        <ui:VisualElement name="Card1ColorStrip" class="card-color-strip" />
+                                        <ui:VisualElement class="card-inner">
+                                            <ui:VisualElement class="card-name-row">
+                                                <ui:Label name="Card1Name" text="Employee Name" class="card-name" />
+                                                <ui:Label name="Card1Difficulty" text="EASY" class="card-difficulty" />
+                                            </ui:VisualElement>
+                                            <ui:Label name="Card1Role" text="Role Title" class="card-role" />
+                                            <ui:VisualElement name="Card1Portrait" class="card-portrait">
+                                                <ui:VisualElement name="Card1RageFace" class="rage-face-badge" />
+                                            </ui:VisualElement>
+                                            <ui:VisualElement name="Card1StatusBadge" class="status-badge status-active">
+                                                <ui:Label name="Card1StatusText" text="ACTIVE" class="status-text" />
+                                            </ui:VisualElement>
+                                            <ui:VisualElement class="card-separator" />
+                                            <ui:Label name="Card1Dislikes" text="Hates: placeholder, placeholder" class="card-dislikes" />
+                                            <ui:Label name="Card1Location" text="@ Location" class="card-location" />
+                                            <ui:VisualElement name="Card1LockBadge" class="lock-badge hidden">
+                                                <ui:Label name="Card1LockText" class="lock-text" />
+                                            </ui:VisualElement>
+                                        </ui:VisualElement>
+                                        <ui:VisualElement class="card-btn-wrap">
+                                            <ui:Button name="OpenProfile1" text="Open Dossier" class="btn-open-profile" />
+                                        </ui:VisualElement>
+                                        <ui:VisualElement class="push-pin push-pin-center" picking-mode="Ignore" />
+                                    </ui:VisualElement>
+
+                                    <ui:VisualElement name="Card2" class="staff-card">
+                                        <ui:VisualElement class="card-shadow" picking-mode="Ignore" />
+                                        <ui:VisualElement name="Card2ColorStrip" class="card-color-strip" />
+                                        <ui:VisualElement class="card-inner">
+                                            <ui:VisualElement class="card-name-row">
+                                                <ui:Label name="Card2Name" text="Employee Name" class="card-name" />
+                                                <ui:Label name="Card2Difficulty" text="HARD" class="card-difficulty" />
+                                            </ui:VisualElement>
+                                            <ui:Label name="Card2Role" text="Role Title" class="card-role" />
+                                            <ui:VisualElement name="Card2Portrait" class="card-portrait">
+                                                <ui:VisualElement name="Card2RageFace" class="rage-face-badge" />
+                                            </ui:VisualElement>
+                                            <ui:VisualElement name="Card2StatusBadge" class="status-badge status-active">
+                                                <ui:Label name="Card2StatusText" text="ACTIVE" class="status-text" />
+                                            </ui:VisualElement>
+                                            <ui:VisualElement class="card-separator" />
+                                            <ui:Label name="Card2Dislikes" text="Hates: placeholder (+1 more)" class="card-dislikes" />
+                                            <ui:Label name="Card2Location" text="@ Location" class="card-location" />
+                                            <ui:VisualElement name="Card2LockBadge" class="lock-badge hidden">
+                                                <ui:Label name="Card2LockText" class="lock-text" />
+                                            </ui:VisualElement>
+                                        </ui:VisualElement>
+                                        <ui:VisualElement class="card-btn-wrap">
+                                            <ui:Button name="OpenProfile2" text="Open Dossier" class="btn-open-profile" />
+                                        </ui:VisualElement>
+                                        <ui:VisualElement class="push-pin push-pin-right" picking-mode="Ignore" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="DossierView" class="dossier-view hidden">
+                                <ui:VisualElement name="DetailColorBanner" class="detail-color-banner" />
+                                <ui:VisualElement name="DetailFolderTab" class="detail-folder-tab" picking-mode="Ignore" />
+                                <ui:VisualElement class="detail-paper-clip" picking-mode="Ignore" />
+
+                                <ui:VisualElement class="detail-body">
+                                    <ui:VisualElement class="detail-header-row">
+                                        <ui:VisualElement class="portrait-wrap">
+                                            <ui:VisualElement class="portrait-shadow" picking-mode="Ignore" />
+                                            <ui:VisualElement name="DetailPortrait" class="portrait" />
+                                            <ui:VisualElement class="portrait-tape" picking-mode="Ignore" />
+                                        </ui:VisualElement>
+
+                                        <ui:VisualElement class="identity-col">
+                                            <ui:Label name="DetailName" text="Employee Name" class="detail-name" />
+                                            <ui:VisualElement class="detail-role-row">
+                                                <ui:Label name="DetailRole" text="Role Title" class="detail-role" />
+                                                <ui:Label name="DetailDifficulty" text="MEDIUM" class="detail-difficulty" />
+                                            </ui:VisualElement>
+                                            <ui:Label name="DetailPersonality" text="Personality description placeholder" class="detail-personality" />
+
+                                            <ui:VisualElement name="DetailStatusRow" class="detail-status-row">
+                                                <ui:VisualElement name="DetailStatusBadge" class="detail-status-badge status-active">
+                                                    <ui:Label name="DetailStatusText" text="ACTIVE" class="status-text" />
+                                                </ui:VisualElement>
+                                            </ui:VisualElement>
+
+                                            <ui:VisualElement name="DetailLockBanner" class="detail-lock-banner hidden">
+                                                <ui:Label name="DetailLockText" text="DOSSIER LOCKED" class="detail-lock-text" />
+                                            </ui:VisualElement>
+                                        </ui:VisualElement>
+                                    </ui:VisualElement>
+
+                                    <ui:VisualElement class="dashed-line" />
+
+                                    <ui:VisualElement class="info-row">
+                                        <ui:VisualElement class="info-left-col">
+                                            <ui:Label name="DetailLikesHeader" text="LIKES" class="info-section-header" />
+                                            <ui:Label name="DetailLikes" text="Placeholder likes" class="info-body" />
+                                            <ui:VisualElement class="dashed-line" />
+                                            <ui:Label name="DetailDislikesHeader" text="DISLIKES" class="info-section-header red-pen" />
+                                            <ui:Label name="DetailDislikes" text="Placeholder dislikes" class="info-body" />
+                                            <ui:VisualElement name="DetailDislikesUnderline" class="red-underline" />
+                                            <ui:VisualElement class="dashed-line" />
+                                            <ui:Label name="DetailHint" text="Intel: placeholder hint text." class="info-hint" />
+                                        </ui:VisualElement>
+
+                                        <ui:VisualElement class="info-right-col">
+                                            <ui:Label name="DetailLocation" text="@ Location" class="info-location" />
+                                            <ui:VisualElement class="dashed-line" />
+                                            <ui:Label name="DetailScheduleHeader" text="DAILY ROUTINE" class="info-section-header" />
+                                            <ui:Label name="DetailSchedule" text="9-12: Location A&#10;12-1: Location B&#10;1-5: Location C" class="info-body info-schedule" />
+                                        </ui:VisualElement>
+                                    </ui:VisualElement>
+
+                                    <ui:VisualElement class="dashed-line" />
+                                    <ui:Button name="DetailBackBtn" text="&lt; Back to Directory" class="btn-back" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <ui:VisualElement name="ProgressPanel" class="panel hidden">
+                            <ui:VisualElement class="progress-body">
+                                <ui:Label text="OPERATION PROGRESS" class="progress-title" />
+                                <ui:VisualElement class="dashed-line" />
+
+                                <ui:VisualElement class="progress-overall-row">
+                                    <ui:Label name="ProgressOverallLabel" text="Coworkers Flipped: 0 / 0" class="progress-overall-label" />
+                                    <ui:VisualElement class="progress-bar-track">
+                                        <ui:VisualElement name="ProgressOverallFill" class="progress-bar-fill" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+
+                                <ui:VisualElement class="dashed-line" />
+                                <ui:ScrollView name="ProgressNpcList" class="progress-npc-list" />
+                                <ui:VisualElement class="dashed-line" />
+
+                                <ui:VisualElement class="progress-objective-section">
+                                    <ui:Label text="CURRENT OBJECTIVE" class="info-section-header" />
+                                    <ui:Label name="ProgressObjective" text="Placeholder objective text." class="progress-objective" />
+                                    <ui:Label name="ProgressNextAction" class="progress-next-action" />
+                                </ui:VisualElement>
+
+                                <ui:VisualElement class="dashed-line" />
+
+                                <ui:VisualElement class="progress-security-row">
+                                    <ui:Label name="ProgressSecurityLabel" text="Job Security: 0%" class="progress-security-label" />
+                                    <ui:VisualElement class="progress-bar-track security-track">
+                                        <ui:VisualElement name="ProgressSecurityFill" class="progress-bar-fill security-fill" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <ui:VisualElement name="MapPanel" class="panel hidden">
+                            <ui:VisualElement class="map-body">
+                                <ui:Label text="OFFICE MAP" class="progress-title" />
+                                <ui:VisualElement class="dashed-line" />
+                                <ui:Label text="Map intel is being compiled.&#10;Check back after recon is complete." class="map-placeholder-msg" />
+                                <ui:VisualElement class="post-it-note">
+                                    <ui:VisualElement class="post-it-shadow" picking-mode="Ignore" />
+                                    <ui:VisualElement class="post-it-pin" picking-mode="Ignore" />
+                                    <ui:Label text="NOTE: Use the Directory tab&#10;to check employee locations." class="post-it-text" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="bottom-rule" />
+
+                    <ui:VisualElement name="FooterRow" class="footer">
+                        <ui:Button name="FooterPrevious" text="&lt; Prev Page" class="footer-btn footer-btn-nav" />
+                        <ui:VisualElement class="footer-counter-wrap">
+                            <ui:Label name="PageCounter" text="pg. 1 / 1" class="page-counter" />
+                        </ui:VisualElement>
+                        <ui:Button name="FooterClose" text="Close [Tab]" class="footer-btn footer-btn-close" />
+                        <ui:Button name="FooterNext" text="Next Page &gt;" class="footer-btn footer-btn-nav" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="ClipboardClip" class="clipboard-clip" picking-mode="Ignore" />
+            <ui:VisualElement class="board-paper-clip" picking-mode="Ignore" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="QuitPopup" class="quit-popup hidden">
+            <ui:VisualElement class="quit-popup-card">
+                <ui:Label text="QUIT GAME?" class="quit-popup-title" />
+                <ui:Label text="The office will survive without you. Probably." class="quit-popup-msg" />
+                <ui:VisualElement class="quit-popup-actions">
+                    <ui:Button name="QuitPopupResume" text="Back to Work" class="btn-pause btn-resume" />
+                    <ui:Button name="QuitPopupQuit" text="Quit to Desktop" class="btn-pause btn-quit" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
