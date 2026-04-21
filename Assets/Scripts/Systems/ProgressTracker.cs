@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using OfficeFlipOut.Data;
 using UnityEngine;
 
 namespace OfficeFlipOut.Systems
@@ -39,6 +40,10 @@ namespace OfficeFlipOut.Systems
         [SerializeField, Min(0.1f)] private float refreshInterval = 0.25f;
         [SerializeField] private List<Rage_Meter> trackedMeters = new List<Rage_Meter>();
 
+        [Header("Display names")]
+        [Tooltip("Optional. Used to populate snapshot display names by npc id (falls back to meter GameObject name).")]
+        [SerializeField] private EmployeeProfileDatabase employeeProfileDatabase;
+
         private readonly List<EmployeeProgressSnapshot> snapshots = new List<EmployeeProgressSnapshot>();
         private float refreshTimer;
 
@@ -53,6 +58,11 @@ namespace OfficeFlipOut.Systems
             }
 
             Instance = this;
+            if (employeeProfileDatabase == null)
+            {
+                employeeProfileDatabase = Resources.Load<EmployeeProfileDatabase>("EmployeeProfileDatabase");
+            }
+
             RebuildTrackedMeters();
             RefreshSnapshots();
         }
@@ -256,7 +266,7 @@ namespace OfficeFlipOut.Systems
 
                 EmployeeProgressSnapshot snapshot = new EmployeeProgressSnapshot();
                 snapshot.npcId = string.IsNullOrWhiteSpace(meter.NpcSignalId) ? meter.name : meter.NpcSignalId;
-                snapshot.displayName = meter.name;
+                snapshot.displayName = ResolveDisplayName(snapshot.npcId, meter.name);
                 snapshot.currentRage = meter.CurrentRage;
                 snapshot.requiredSignals = meter.RequiredSignals;
                 snapshot.isFlippedOut = meter.IsFlippedOut;
@@ -268,6 +278,20 @@ namespace OfficeFlipOut.Systems
             }
 
             ProgressChanged?.Invoke();
+        }
+
+        private string ResolveDisplayName(string npcId, string meterObjectName)
+        {
+            if (employeeProfileDatabase != null && !string.IsNullOrWhiteSpace(npcId))
+            {
+                EmployeeProfileData profile = employeeProfileDatabase.GetProfileByNpcId(npcId);
+                if (profile != null && !string.IsNullOrWhiteSpace(profile.DisplayName))
+                {
+                    return profile.DisplayName;
+                }
+            }
+
+            return meterObjectName;
         }
     }
 }

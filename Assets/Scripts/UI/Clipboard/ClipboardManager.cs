@@ -121,11 +121,14 @@ namespace OfficeFlipOut.UI
             if (database == null)
             {
                 database = Resources.Load<EmployeeProfileDatabase>("EmployeeProfileDatabase");
+#if UNITY_EDITOR
                 if (database == null)
                 {
-                    database = ScriptableObject.CreateInstance<EmployeeProfileDatabase>();
-                    database.hideFlags = HideFlags.DontSave;
+                    Debug.LogWarning(
+                        "[ClipboardManager] Assign EmployeeProfileDatabase or run Office Flip Out / Generate Default Employee Data.",
+                        this);
                 }
+#endif
             }
         }
 

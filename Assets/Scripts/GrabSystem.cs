@@ -38,8 +38,10 @@ public class PhysicsGrab : MonoBehaviour
     [Header("Coffee Spill Snap (Button Interaction)")]
     [Tooltip("When the player presses E on the coffee spill signal while holding coffee, lock it into this pose.")]
     public bool snapCoffeeIntoSpilledState = true;
+    [Tooltip("Treat coffeeSpillSnapLocalPosition as an offset from the coffee's current local position after snapping to the spill signal.")]
+    public bool coffeeSpillPositionIsOffset = true;
     public Vector3 coffeeSpillSnapLocalPosition = Vector3.zero;
-    public Vector3 coffeeSpillSnapLocalEulerAngles = Vector3.zero;
+    public Vector3 coffeeSpillSnapLocalEulerAngles = new Vector3(0f, 0f, 90f);
     [Tooltip("Optional: if the held coffee already has a CoffeeSpillRage component, disable it so physics collisions don't double-trigger.")]
     public bool disableCoffeeSpillRageOnSnap = true;
 
@@ -223,14 +225,47 @@ public class PhysicsGrab : MonoBehaviour
         {
             coffeeBody.transform.SetParent(spillSignal.transform, true);
         }
+<<<<<<< Updated upstream:Assets/Scripts/GrabSystem.cs
         coffeeBody.transform.localPosition = coffeeSpillSnapLocalPosition;
         coffeeBody.transform.localRotation = Quaternion.Euler(coffeeSpillSnapLocalEulerAngles);
+=======
+
+        Vector3 spillTargetLocalPosition = coffeeSpillPositionIsOffset
+            ? coffeeBody.transform.localPosition + coffeeSpillSnapLocalPosition
+            : coffeeSpillSnapLocalPosition;
+        Quaternion targetLocalRotation = Quaternion.Euler(coffeeSpillSnapLocalEulerAngles);
+>>>>>>> Stashed changes:Assets/Scripts/Gameplay/Interaction/PhysicsGrab.cs
 
         coffeeBody.linearVelocity = Vector3.zero;
         coffeeBody.angularVelocity = Vector3.zero;
         coffeeBody.useGravity = false;
         coffeeBody.isKinematic = true;
 
+<<<<<<< Updated upstream:Assets/Scripts/GrabSystem.cs
+=======
+        bool playedJuiceAnimation = false;
+        CoffeeSpillJuiceAnimator spillJuiceAnimator = coffeeBody.GetComponent<CoffeeSpillJuiceAnimator>();
+        if (spillJuiceAnimator == null)
+        {
+            spillJuiceAnimator = coffeeBody.gameObject.AddComponent<CoffeeSpillJuiceAnimator>();
+        }
+
+        if (spillJuiceAnimator != null)
+        {
+            Transform cameraTransform = cam != null ? cam.transform : null;
+            playedJuiceAnimation = spillJuiceAnimator.TryPlaySpill(
+                spillTargetLocalPosition,
+                targetLocalRotation,
+                cameraTransform);
+        }
+
+        if (!playedJuiceAnimation)
+        {
+            coffeeBody.transform.localPosition = spillTargetLocalPosition;
+            coffeeBody.transform.localRotation = targetLocalRotation;
+        }
+
+>>>>>>> Stashed changes:Assets/Scripts/Gameplay/Interaction/PhysicsGrab.cs
         if (disableCoffeeSpillRageOnSnap)
         {
             CoffeeSpillRage spillRage = coffeeBody.GetComponent<CoffeeSpillRage>();

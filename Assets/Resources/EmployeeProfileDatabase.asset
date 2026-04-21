@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f915ac742c7b434c8a8f90406df8793, type: 3}
+  m_Name: EmployeeProfileDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::OfficeFlipOut.Data.EmployeeProfileDatabase
+  profiles:
+  - {fileID: 11400000, guid: cb2bed66bbe0d5941a47fb1520b0c629, type: 2}
+  - {fileID: 11400000, guid: 8453d6379523a7d408576e33086fc8f8, type: 2}
+  - {fileID: 11400000, guid: aa1435051e4550a49851acfc877a674d, type: 2}
+  - {fileID: 11400000, guid: f4d98fd41fbd9f24abdd1e76cc962ce6, type: 2}
+  useBuiltInDefaultsWhenEmpty: 0

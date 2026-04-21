@@ -5,7 +5,7 @@ using OfficeFlipOut.UI;
 
 public class PlayerMovement : MonoBehaviour
 {
-    public float speed = 5f;
+    public float speed = 8f;
 
     // Update is called once per frame
     void Update()

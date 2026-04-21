@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a29417f9740a041b79b59f196abbf9e0, type: 3}
+  m_Name: EmployeeProfile_Brutus_Stragenoff
+  m_EditorClassIdentifier: Assembly-CSharp::OfficeFlipOut.Data.EmployeeProfileData
+  npcId: npc_2
+  displayName: Brutus Stragenoff
+  role: Coworker
+  colorIdentity: Red
+  portrait: {fileID: 0}
+  personalitySummary: Temperamental and easy to provoke. Great first target to learn
+    sabotage flow.
+  sabotageHint: Stack quick annoyances near his desk to trigger an early FLIP OUT.
+  likes:
+  - Quiet workspace
+  - Personal desk order
+  dislikes:
+  - Spilled drinks
+  - Microwave fish smell
+  - Stapler theft
+  difficultyTier: 0
+  startsLocked: 0
+  requiresAllCoworkersFlipped: 0
+  scheduleBlocks:
+  - label: Desk Grind
+    location: Desk Row A
+    startHour: 8
+    endHour: 11
+  - label: Coffee Run
+    location: Break Room
+    startHour: 11
+    endHour: 12
+  - label: Desk Grind
+    location: Desk Row A
+    startHour: 12
+    endHour: 17

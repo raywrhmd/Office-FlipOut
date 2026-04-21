@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a29417f9740a041b79b59f196abbf9e0, type: 3}
+  m_Name: EmployeeProfile_Da_Boss
+  m_EditorClassIdentifier: Assembly-CSharp::OfficeFlipOut.Data.EmployeeProfileData
+  npcId: boss_1
+  displayName: Da Boss
+  role: Final Obstacle
+  colorIdentity: Executive Black
+  portrait: {fileID: 0}
+  personalitySummary: Mysterious and all-seeing. Only destabilizes after everyone
+    else has flipped.
+  sabotageHint: Complete all coworker FLIP OUTs to unlock final pressure sequence.
+  likes:
+  - Order
+  - Control
+  - Quiet office floor
+  dislikes:
+  - Open chaos
+  - Visible insubordination
+  - Total disruption
+  difficultyTier: 3
+  startsLocked: 1
+  requiresAllCoworkersFlipped: 1
+  scheduleBlocks:
+  - label: Executive Round
+    location: Boss Office
+    startHour: 9
+    endHour: 12
+  - label: Floor Sweep
+    location: Main Office
+    startHour: 13
+    endHour: 15
+  - label: Lockdown
+    location: Boss Office
+    startHour: 15
+    endHour: 18

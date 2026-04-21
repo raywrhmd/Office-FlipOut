@@ -1,6 +1,8 @@
+using System;
 using UnityEngine;
-using UnityEngine.Events;
 using System.Collections.Generic;
+using System.Collections;
+using OfficeFlipOut.Systems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -14,10 +16,25 @@ public class Rage_Meter : MonoBehaviour
     [Tooltip("Optional: only accept global signals targeting this id. Leave empty to accept untargeted signals.")]
     [SerializeField] private string npcSignalId;
 
+    [Header("Boss gating")]
+    [Tooltip("When true (e.g. Da Boss), sabotage signals are ignored until all other NPC meters are flipped.")]
+    [SerializeField] private bool requireAllOtherNpcsFlippedBeforeAcceptingSignals;
+
     [Header("Flip Out Trigger")]
     [SerializeField] private MonoBehaviour flipOutReceiver;
     [SerializeField] private string flipOutMethodName = "FlipOut";
-    [SerializeField] private UnityEvent onFlipOut;
+
+    [Header("Flip Out Cinematic")]
+    [SerializeField] private bool playFlipOutCinematic = true;
+    [SerializeField, Min(0f)] private float thresholdToCameraMoveDelay = 0.15f;
+    [SerializeField, Min(0.05f)] private float cameraMoveToNpcDuration = 0.85f;
+    [SerializeField, Min(0.05f)] private float npcRageDuration = 2.0f;
+    [SerializeField, Min(0.05f)] private float cameraReturnToPlayerDuration = 0.5f;
+    [SerializeField] private float cinematicLookTargetHeight = 1.4f;
+    [SerializeField] private bool lockGameplayInputDuringCinematic = true;
+    [SerializeField] private string cinematicCameraName = "RageCinematicCamera";
+    [SerializeField, Min(0.5f)] private float cinematicCameraDistance = 3.5f;
+    [SerializeField, Min(0f)] private float cinematicCameraHeight = 1.7f;
 
     [Header("Flip Out Physics Blast")]
     [SerializeField] private bool emitFlipOutPhysicsBlast = true;
@@ -27,13 +44,22 @@ public class Rage_Meter : MonoBehaviour
     [SerializeField] private float flipOutBlastRandomTorque = 10f;
     [SerializeField] private ForceMode flipOutBlastForceMode = ForceMode.Impulse;
 
-    [Header("Visual Rage Icons")]
-    [SerializeField] private Transform iconAnchor;
+    [Header("Visuals")]
+    [SerializeField] private bool ensureNpcFacesCamera = true;
+    [SerializeField] private SpriteRenderer npcBodyRenderer;
+    [SerializeField] private Sprite npcCalmSprite;
+    [SerializeField] private Sprite npcAngrySprite;
+    [SerializeField] private Sprite npcFlipOutBodySprite;
+    [SerializeField] private bool showRageFaceOverlay = true;
+    [SerializeField] private Transform rageFaceAnchor;
     [SerializeField] private SpriteRenderer rageFaceRenderer;
-    [SerializeField] private Sprite neutralFaceSprite;
-    [SerializeField] private Sprite[] angerFaceSprites = new Sprite[3];
-    [SerializeField] private Sprite flipOutFaceSprite;
-    [SerializeField] private float iconVerticalOffset = 2f;
+    [SerializeField] private Sprite rageFaceCalmSprite;
+    [SerializeField] private Sprite rageFaceRage1Sprite;
+    [SerializeField] private Sprite rageFaceRage2Sprite;
+    [SerializeField] private Sprite rageFaceRage3Sprite;
+    [SerializeField] private Sprite rageFaceRage4Sprite;
+    [SerializeField] private Sprite rageFaceFlipOutSprite;
+    [SerializeField] private float rageFaceVerticalOffset = 2f;
     [SerializeField] private Vector3 rageFaceScale = new Vector3(0.25f, 0.25f, 1f);
 
     [Header("Debug Testing")]
@@ -47,17 +73,17 @@ public class Rage_Meter : MonoBehaviour
     public bool IsFlippedOut => isFlippedOut;
     public string NpcSignalId => npcSignalId;
 
+    /// <summary>Fired when a new unique sabotage signal increases rage (for VFX / juice).</summary>
+    public event Action<Rage_Meter> SuccessfulSabotageSignal;
+
+    /// <summary>Fired once when this NPC enters flip-out state.</summary>
+    public event Action<Rage_Meter> FlippedOut;
+
     public Sprite CurrentRageFaceSprite
     {
         get
         {
-            if (isFlippedOut && flipOutFaceSprite != null)
-                return flipOutFaceSprite;
-            if (currentRage <= 0 || angerFaceSprites == null || angerFaceSprites.Length == 0)
-                return neutralFaceSprite;
-            float normalized = (float)currentRage / Mathf.Max(1, requiredSignals);
-            int idx = Mathf.Clamp(Mathf.CeilToInt(normalized * angerFaceSprites.Length) - 1, 0, angerFaceSprites.Length - 1);
-            return angerFaceSprites[idx] != null ? angerFaceSprites[idx] : neutralFaceSprite;
+            return GetCurrentRageFaceSprite();
         }
     }
 
@@ -65,12 +91,18 @@ public class Rage_Meter : MonoBehaviour
 
     private int currentRage;
     private bool isFlippedOut;
+    private bool isFlipOutSequenceRunning;
 
     private void Awake()
     {
-        EnsureAnchor();
-        BuildIcons();
-        RefreshIcons();
+        if (ensureNpcFacesCamera && GetComponent<NpcCameraBillboard>() == null)
+        {
+            gameObject.AddComponent<NpcCameraBillboard>();
+        }
+        AutoAssignVisualReferences();
+        EnsureRageFaceVisual();
+        RefreshNpcBodySprite();
+        RefreshRageFaceSprite();
     }
 
     private void OnEnable()
@@ -81,6 +113,12 @@ public class Rage_Meter : MonoBehaviour
     private void OnDisable()
     {
         RageSignalHub.SignalRaised -= HandleGlobalSignal;
+
+        if (isFlipOutSequenceRunning)
+        {
+            isFlipOutSequenceRunning = false;
+            GameRuntimeState.SetCinematicInputLocked(false);
+        }
     }
 
     private void Update()
@@ -149,12 +187,33 @@ public class Rage_Meter : MonoBehaviour
 
     public void ReceiveSignal(string signalId)
     {
-        AddSignal(signalId);
+        TryAddSignal(signalId, false);
     }
 
     public void AddSignal(string signalId)
     {
+        TryAddSignal(signalId, false);
+    }
+
+    /// <summary>Debug / cheat paths can bypass boss ordering.</summary>
+    public void AddSignalIgnoringBossGate(string signalId)
+    {
+        TryAddSignal(signalId, true);
+    }
+
+    private void TryAddSignal(string signalId, bool ignoreBossGate)
+    {
         if (isFlippedOut)
+        {
+            return;
+        }
+
+        if (isFlipOutSequenceRunning)
+        {
+            return;
+        }
+
+        if (!ignoreBossGate && !MayAcceptSabotageSignals())
         {
             return;
         }
@@ -170,12 +229,35 @@ public class Rage_Meter : MonoBehaviour
         }
 
         currentRage = Mathf.Min(currentRage + 1, requiredSignals);
-        RefreshIcons();
+        RefreshNpcBodySprite();
+        RefreshRageFaceSprite();
+
+        SuccessfulSabotageSignal?.Invoke(this);
 
         if (currentRage >= requiredSignals)
         {
-            EnterRageState();
+            BeginFlipOutSequence();
         }
+    }
+
+    private bool MayAcceptSabotageSignals()
+    {
+        if (!requireAllOtherNpcsFlippedBeforeAcceptingSignals)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(npcSignalId))
+        {
+            return true;
+        }
+
+        if (ProgressTracker.Instance == null)
+        {
+            return false;
+        }
+
+        return ProgressTracker.Instance.AreAllCoworkersFlipped(npcSignalId);
     }
 
     public bool HasReceivedSignal(string signalId)
@@ -192,8 +274,11 @@ public class Rage_Meter : MonoBehaviour
     {
         currentRage = 0;
         isFlippedOut = false;
+        isFlipOutSequenceRunning = false;
         receivedSignalIds.Clear();
-        RefreshIcons();
+        GameRuntimeState.SetCinematicInputLocked(false);
+        RefreshNpcBodySprite();
+        RefreshRageFaceSprite();
     }
 
     public void RemoveRage(int amount = 1)
@@ -209,13 +294,14 @@ public class Rage_Meter : MonoBehaviour
             isFlippedOut = false;
         }
 
-        RefreshIcons();
+        RefreshNpcBodySprite();
+        RefreshRageFaceSprite();
     }
 
     [ContextMenu("Debug/Add 1 Rage")]
     private void DebugAddOneRage()
     {
-        AddSignal("debug_" + Time.frameCount + "_" + Random.Range(0, 100000));
+        AddSignalIgnoringBossGate("debug_" + Time.frameCount + "_" + UnityEngine.Random.Range(0, 100000));
     }
 
     [ContextMenu("Debug/Remove 1 Rage")]
@@ -230,6 +316,188 @@ public class Rage_Meter : MonoBehaviour
         ResetRage();
     }
 
+    private void BeginFlipOutSequence()
+    {
+        if (isFlippedOut || isFlipOutSequenceRunning)
+        {
+            return;
+        }
+
+        if (!playFlipOutCinematic)
+        {
+            EnterRageState();
+            return;
+        }
+
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            EnterRageState();
+            return;
+        }
+
+        StartCoroutine(FlipOutSequenceRoutine(mainCamera.transform));
+    }
+
+    private IEnumerator FlipOutSequenceRoutine(Transform cameraTransform)
+    {
+        isFlipOutSequenceRunning = true;
+
+        bool shouldLockInput = lockGameplayInputDuringCinematic && !GameRuntimeState.ShouldBlockGameplayInput;
+        if (shouldLockInput)
+        {
+            GameRuntimeState.SetCinematicInputLocked(true);
+        }
+
+        Camera mainCamera = cameraTransform.GetComponent<Camera>();
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+        }
+
+        Vector3 cameraStartPosition = cameraTransform.position;
+        Quaternion cameraStartRotation = cameraTransform.rotation;
+        Camera cinematicCamera = null;
+        Transform cinematicTransform = cameraTransform;
+        if (mainCamera != null)
+        {
+            cinematicCamera = SpawnCinematicCamera(mainCamera);
+            if (cinematicCamera != null)
+            {
+                cinematicTransform = cinematicCamera.transform;
+                mainCamera.enabled = false;
+            }
+        }
+
+        Vector3 cinematicFocusPosition;
+        Quaternion cinematicFocusRotation;
+        CalculateCinematicPose(cameraStartPosition, out cinematicFocusPosition, out cinematicFocusRotation);
+
+        // Step 1: Threshold reached, brief pre-camera delay.
+        if (thresholdToCameraMoveDelay > 0f)
+        {
+            yield return new WaitForSeconds(thresholdToCameraMoveDelay);
+        }
+
+        // Step 2: Player camera moves to NPC cinematic framing.
+        float focusElapsed = 0f;
+        while (focusElapsed < cameraMoveToNpcDuration)
+        {
+            focusElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(focusElapsed / cameraMoveToNpcDuration);
+            float eased = t * t * (3f - 2f * t);
+            cinematicTransform.position = Vector3.Lerp(cameraStartPosition, cinematicFocusPosition, eased);
+            Quaternion dynamicLookRotation = GetLookRotationFromPosition(cinematicTransform.position, cinematicFocusRotation);
+            cinematicTransform.rotation = Quaternion.Slerp(cameraStartRotation, dynamicLookRotation, eased);
+            yield return null;
+        }
+
+        cinematicTransform.position = cinematicFocusPosition;
+        cinematicTransform.rotation = GetLookRotationFromPosition(cinematicTransform.position, cinematicFocusRotation);
+
+        EnterRageState();
+
+        // Step 3: NPC rages while camera stays locked on them.
+        if (npcRageDuration > 0f)
+        {
+            float holdElapsed = 0f;
+            while (holdElapsed < npcRageDuration)
+            {
+                holdElapsed += Time.deltaTime;
+                cinematicTransform.rotation = GetLookRotationFromPosition(cinematicTransform.position, cinematicFocusRotation);
+                yield return null;
+            }
+        }
+
+        // Step 4: Player camera returns.
+        float returnElapsed = 0f;
+        Vector3 returnStartPosition = cinematicTransform.position;
+        Quaternion returnStartRotation = cinematicTransform.rotation;
+        while (returnElapsed < cameraReturnToPlayerDuration)
+        {
+            returnElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(returnElapsed / cameraReturnToPlayerDuration);
+            float eased = t * t * (3f - 2f * t);
+            cinematicTransform.position = Vector3.Lerp(returnStartPosition, cameraStartPosition, eased);
+            cinematicTransform.rotation = Quaternion.Slerp(returnStartRotation, cameraStartRotation, eased);
+            yield return null;
+        }
+
+        cinematicTransform.position = cameraStartPosition;
+        cinematicTransform.rotation = cameraStartRotation;
+
+        if (mainCamera != null)
+        {
+            mainCamera.enabled = true;
+        }
+
+        if (cinematicCamera != null)
+        {
+            Destroy(cinematicCamera.gameObject);
+        }
+
+        if (shouldLockInput)
+        {
+            GameRuntimeState.SetCinematicInputLocked(false);
+        }
+
+        isFlipOutSequenceRunning = false;
+    }
+
+    private Camera SpawnCinematicCamera(Camera sourceCamera)
+    {
+        if (sourceCamera == null)
+        {
+            return null;
+        }
+
+        GameObject cameraObject = new GameObject(cinematicCameraName);
+        cameraObject.transform.position = sourceCamera.transform.position;
+        cameraObject.transform.rotation = sourceCamera.transform.rotation;
+
+        Camera newCamera = cameraObject.AddComponent<Camera>();
+        newCamera.CopyFrom(sourceCamera);
+        newCamera.enabled = true;
+
+        AudioListener sourceListener = sourceCamera.GetComponent<AudioListener>();
+        if (sourceListener != null && sourceListener.enabled)
+        {
+            AudioListener newListener = cameraObject.AddComponent<AudioListener>();
+            newListener.enabled = true;
+        }
+
+        return newCamera;
+    }
+
+    private void CalculateCinematicPose(Vector3 sourceCameraPosition, out Vector3 desiredPosition, out Quaternion desiredRotation)
+    {
+        Vector3 lookTarget = transform.position + Vector3.up * cinematicLookTargetHeight;
+        Vector3 fromNpcToPlayerCam = sourceCameraPosition - transform.position;
+        fromNpcToPlayerCam.y = 0f;
+        if (fromNpcToPlayerCam.sqrMagnitude <= 0.001f)
+        {
+            fromNpcToPlayerCam = -transform.forward;
+            fromNpcToPlayerCam.y = 0f;
+        }
+
+        Vector3 direction = fromNpcToPlayerCam.normalized;
+        desiredPosition = lookTarget + (direction * cinematicCameraDistance);
+        desiredPosition.y = transform.position.y + cinematicCameraHeight;
+        desiredRotation = Quaternion.LookRotation(lookTarget - desiredPosition, Vector3.up);
+    }
+
+    private Quaternion GetLookRotationFromPosition(Vector3 cameraPosition, Quaternion fallbackRotation)
+    {
+        Vector3 lookTarget = transform.position + Vector3.up * cinematicLookTargetHeight;
+        Vector3 lookDirection = lookTarget - cameraPosition;
+        if (lookDirection.sqrMagnitude <= 0.0001f)
+        {
+            return fallbackRotation;
+        }
+
+        return Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
+    }
+
     private void EnterRageState()
     {
         if (isFlippedOut)
@@ -238,8 +506,9 @@ public class Rage_Meter : MonoBehaviour
         }
 
         isFlippedOut = true;
-        RefreshIcons();
-        onFlipOut?.Invoke();
+        RefreshNpcBodySprite();
+        RefreshRageFaceSprite();
+        FlippedOut?.Invoke(this);
 
         if (flipOutReceiver != null && !string.IsNullOrEmpty(flipOutMethodName))
         {
@@ -269,30 +538,69 @@ public class Rage_Meter : MonoBehaviour
         AddSignal(signalId);
     }
 
-    private void EnsureAnchor()
+    private void AutoAssignVisualReferences()
     {
-        if (iconAnchor != null)
+        if (npcBodyRenderer == null)
+        {
+            npcBodyRenderer = FindBestNpcBodyRenderer();
+        }
+
+        if (npcCalmSprite == null && npcBodyRenderer != null)
+        {
+            npcCalmSprite = npcBodyRenderer.sprite;
+        }
+    }
+
+    private SpriteRenderer FindBestNpcBodyRenderer()
+    {
+        SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            SpriteRenderer candidate = renderers[i];
+            if (candidate == null || candidate == rageFaceRenderer)
+            {
+                continue;
+            }
+
+            return candidate;
+        }
+
+        return null;
+    }
+
+    private void RefreshNpcBodySprite()
+    {
+        if (npcBodyRenderer == null)
         {
             return;
         }
 
-        GameObject anchorObject = new GameObject("RageIconAnchor");
-        anchorObject.transform.SetParent(transform);
-        anchorObject.transform.localPosition = Vector3.up * iconVerticalOffset;
-        anchorObject.transform.localRotation = Quaternion.identity;
-        iconAnchor = anchorObject.transform;
+        Sprite sprite = GetCurrentNpcBodySprite();
+        if (sprite != null)
+        {
+            npcBodyRenderer.sprite = sprite;
+        }
     }
 
-    private void BuildIcons()
+    private void EnsureRageFaceVisual()
     {
-        if (iconAnchor == null)
+        if (!showRageFaceOverlay)
         {
             return;
+        }
+
+        if (rageFaceAnchor == null)
+        {
+            GameObject anchor = new GameObject("RageFaceAnchor");
+            anchor.transform.SetParent(transform);
+            anchor.transform.localPosition = Vector3.up * rageFaceVerticalOffset;
+            anchor.transform.localRotation = Quaternion.identity;
+            rageFaceAnchor = anchor.transform;
         }
 
         if (rageFaceRenderer == null)
         {
-            Transform existing = iconAnchor.Find("RageFaceVisual");
+            Transform existing = rageFaceAnchor.Find("RageFaceVisual");
             if (existing != null)
             {
                 rageFaceRenderer = existing.GetComponent<SpriteRenderer>();
@@ -300,45 +608,102 @@ public class Rage_Meter : MonoBehaviour
 
             if (rageFaceRenderer == null)
             {
-                GameObject faceObject = new GameObject("RageFaceVisual");
-                faceObject.transform.SetParent(iconAnchor);
-                faceObject.transform.localPosition = Vector3.zero;
-                faceObject.transform.localRotation = Quaternion.identity;
-                faceObject.transform.localScale = rageFaceScale;
-                rageFaceRenderer = faceObject.AddComponent<SpriteRenderer>();
+                GameObject visual = new GameObject("RageFaceVisual");
+                visual.transform.SetParent(rageFaceAnchor);
+                visual.transform.localPosition = Vector3.zero;
+                visual.transform.localRotation = Quaternion.identity;
+                rageFaceRenderer = visual.AddComponent<SpriteRenderer>();
             }
         }
 
+        rageFaceAnchor.localPosition = Vector3.up * rageFaceVerticalOffset;
         rageFaceRenderer.transform.localScale = rageFaceScale;
     }
 
-    private void RefreshIcons()
+    private void RefreshRageFaceSprite()
     {
+        if (!showRageFaceOverlay)
+        {
+            if (rageFaceRenderer != null)
+            {
+                rageFaceRenderer.enabled = false;
+            }
+
+            return;
+        }
+
+        EnsureRageFaceVisual();
         if (rageFaceRenderer == null)
         {
             return;
         }
 
-        Sprite desiredSprite;
+        Sprite faceSprite = GetCurrentRageFaceSprite();
+        rageFaceRenderer.sprite = faceSprite;
+        rageFaceRenderer.enabled = faceSprite != null;
+    }
 
-        if (isFlippedOut && flipOutFaceSprite != null)
+    private Sprite GetCurrentNpcBodySprite()
+    {
+        if (isFlippedOut && npcFlipOutBodySprite != null)
         {
-            desiredSprite = flipOutFaceSprite;
+            return npcFlipOutBodySprite;
         }
-        else if (currentRage <= 0 || angerFaceSprites == null || angerFaceSprites.Length == 0)
+
+        if (!isFlippedOut && currentRage > 0 && npcAngrySprite != null)
         {
-            desiredSprite = neutralFaceSprite;
+            return npcAngrySprite;
         }
-        else
+
+        return npcCalmSprite;
+    }
+
+    private Sprite GetCurrentRageFaceSprite()
+    {
+        if (isFlippedOut)
+        {
+            if (rageFaceFlipOutSprite != null)
+            {
+                return rageFaceFlipOutSprite;
+            }
+
+            // If no dedicated flip-out face exists, keep strongest rage face instead of dropping to calm.
+            Sprite maxRage = GetRageFaceSpriteForNormalizedProgress(1f);
+            if (maxRage != null)
+            {
+                return maxRage;
+            }
+        }
+
+        if (!isFlippedOut && currentRage > 0)
         {
             float normalizedRage = (float)currentRage / Mathf.Max(1, requiredSignals);
-            int stageIndex = Mathf.CeilToInt(normalizedRage * angerFaceSprites.Length) - 1;
-            stageIndex = Mathf.Clamp(stageIndex, 0, angerFaceSprites.Length - 1);
-            desiredSprite = angerFaceSprites[stageIndex] != null ? angerFaceSprites[stageIndex] : neutralFaceSprite;
+            Sprite stageSprite = GetRageFaceSpriteForNormalizedProgress(normalizedRage);
+            if (stageSprite != null)
+            {
+                return stageSprite;
+            }
         }
 
-        rageFaceRenderer.sprite = desiredSprite;
-        rageFaceRenderer.enabled = desiredSprite != null;
+        return rageFaceCalmSprite;
+    }
+
+    private Sprite GetRageFaceSpriteForNormalizedProgress(float normalizedProgress)
+    {
+        float clamped = Mathf.Clamp01(normalizedProgress);
+        int stage = Mathf.Clamp(Mathf.CeilToInt(clamped * 4f), 1, 4);
+
+        switch (stage)
+        {
+            case 4:
+                return rageFaceRage4Sprite ?? rageFaceRage3Sprite ?? rageFaceRage2Sprite ?? rageFaceRage1Sprite;
+            case 3:
+                return rageFaceRage3Sprite ?? rageFaceRage2Sprite ?? rageFaceRage1Sprite;
+            case 2:
+                return rageFaceRage2Sprite ?? rageFaceRage1Sprite;
+            default:
+                return rageFaceRage1Sprite;
+        }
     }
 
     private void OnValidate()
@@ -349,13 +714,15 @@ public class Rage_Meter : MonoBehaviour
         }
 
         currentRage = Mathf.Clamp(currentRage, 0, requiredSignals);
+        AutoAssignVisualReferences();
+        EnsureRageFaceVisual();
 
-        if (iconAnchor != null && rageFaceRenderer != null)
+        if (npcBodyRenderer != null)
         {
-            rageFaceRenderer.transform.localPosition = Vector3.zero;
-            rageFaceRenderer.transform.localScale = rageFaceScale;
-            RefreshIcons();
+            RefreshNpcBodySprite();
         }
+
+        RefreshRageFaceSprite();
     }
 }
 

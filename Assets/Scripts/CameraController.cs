@@ -1,5 +1,6 @@
 using UnityEngine;
 using OfficeFlipOut.UI;
+using OfficeFlipOut.Systems;
 
 public class MouseLook : MonoBehaviour
 {
@@ -17,6 +18,17 @@ public class MouseLook : MonoBehaviour
     {
         if (ClipboardUIState.ShouldBlockGameplayInput)
         {
+            if (GameRuntimeState.IsCinematicInputLocked)
+            {
+                if (Cursor.lockState != CursorLockMode.Locked)
+                {
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
+                }
+
+                return;
+            }
+
             if (Cursor.lockState != CursorLockMode.None)
             {
                 Cursor.lockState = CursorLockMode.None;

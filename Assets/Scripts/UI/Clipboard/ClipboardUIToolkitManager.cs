@@ -121,7 +121,30 @@ namespace OfficeFlipOut.UI
         {
             ClipboardUIState.ClipboardOpenChanged -= HandleOpenChanged;
             ClipboardUIState.ClipboardTabChanged -= HandleTabChanged;
+            if (progressTracker != null)
+            {
+                progressTracker.ProgressChanged -= HandleProgressTrackerChanged;
+            }
             if (cursorSnapshotCaptured) RestoreCursorSnapshot();
+        }
+
+        private void HandleProgressTrackerChanged()
+        {
+            if (!initialized || !ClipboardUIState.IsOpen)
+            {
+                return;
+            }
+
+            ClipboardTab tab = ClipboardUIState.ActiveTab;
+            if (tab == ClipboardTab.Directory)
+            {
+                if (dossierOpen) RefreshDetail();
+                else RefreshDirectory();
+            }
+            else if (tab == ClipboardTab.Progress)
+            {
+                RefreshProgress();
+            }
         }
 
         private void Update()
@@ -181,11 +204,20 @@ namespace OfficeFlipOut.UI
             if (database == null)
             {
                 database = Resources.Load<EmployeeProfileDatabase>("EmployeeProfileDatabase");
+#if UNITY_EDITOR
                 if (database == null)
                 {
-                    database = ScriptableObject.CreateInstance<EmployeeProfileDatabase>();
-                    database.hideFlags = HideFlags.DontSave;
+                    Debug.LogWarning(
+                        "[ClipboardUIToolkitManager] Assign EmployeeProfileDatabase in the inspector or add Assets/Resources/EmployeeProfileDatabase.asset (menu: Office Flip Out / Generate Default Employee Data).",
+                        this);
                 }
+#endif
+            }
+
+            if (progressTracker != null)
+            {
+                progressTracker.ProgressChanged -= HandleProgressTrackerChanged;
+                progressTracker.ProgressChanged += HandleProgressTrackerChanged;
             }
         }
 
@@ -592,7 +624,7 @@ namespace OfficeFlipOut.UI
             detailRole.text = profile.Role + "  /  " + profile.ColorIdentity;
             detailDifficulty.text = GetDifficultyLabel(profile.DifficultyTier);
             SetTextColor(detailDifficulty, GetDifficultyColor(profile.DifficultyTier));
-            detailPersonality.text = "\u201CPlaceholder\u201D";
+            detailPersonality.text = FormatPersonalityQuote(profile.PersonalitySummary);
             SetVisible(detailLockBanner, false);
 
             UpdateDetailStatusBadge(profile.NpcId);
@@ -694,12 +726,12 @@ namespace OfficeFlipOut.UI
 
             progressNpcList.Clear();
 
-            IReadOnlyList<EmployeeProfileData> profiles = database != null ? database.GetProfiles() : null;
-
             for (int i = 0; i < snaps.Count; i++)
             {
                 ProgressTracker.EmployeeProgressSnapshot snap = snaps[i];
-                EmployeeProfileData profile = profiles != null && i < profiles.Count ? profiles[i] : null;
+                EmployeeProfileData profile = database != null
+                    ? database.GetProfileByNpcId(snap.npcId)
+                    : null;
                 bool locked = profile != null && IsLocked(profile);
 
                 VisualElement row = new VisualElement();
@@ -901,6 +933,16 @@ namespace OfficeFlipOut.UI
         }
 
         // P5: format dislikes summary for directory cards
+        private static string FormatPersonalityQuote(string summary)
+        {
+            if (string.IsNullOrWhiteSpace(summary))
+            {
+                return "\u201CNo intel on personality yet.\u201D";
+            }
+
+            return "\u201C" + summary + "\u201D";
+        }
+
         private static string FormatDislikeSummary(IReadOnlyList<string> dislikes)
         {
             if (dislikes == null || dislikes.Count == 0)
