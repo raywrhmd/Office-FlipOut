@@ -1,5 +1,6 @@
 using OfficeFlipOut.Data;
 using OfficeFlipOut.Systems;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -60,6 +61,13 @@ namespace OfficeFlipOut.UI
         private EmployeeDetailView detailView;
         private ProgressTracker progressTracker;
         private ClipboardAnimator animator;
+        private CanvasScaler canvasScaler;
+        private RectTransform boardRect;
+        private RectTransform boardShadowRect;
+        private Text footerCloseLabel;
+        private int cachedScreenWidth;
+        private int cachedScreenHeight;
+        private Coroutine deferredLayoutRoutine;
 
         private void Awake()
         {
@@ -95,6 +103,19 @@ namespace OfficeFlipOut.UI
             if (Input.GetKeyDown(KeyCode.Alpha1)) ClipboardUIState.SetTab(ClipboardTab.Directory);
             else if (Input.GetKeyDown(KeyCode.Alpha2)) ClipboardUIState.SetTab(ClipboardTab.Progress);
             else if (Input.GetKeyDown(KeyCode.Alpha3)) ClipboardUIState.SetTab(ClipboardTab.Map);
+        }
+
+        private void LateUpdate()
+        {
+            if (!initialized || boardRect == null || canvasScaler == null) return;
+            if (cachedScreenWidth == Screen.width && cachedScreenHeight == Screen.height) return;
+
+            UpdateResponsiveBoardLayout();
+            if (animator != null)
+            {
+                animator.RefreshAnchors();
+            }
+            RequestDeferredLayoutRefresh();
         }
 
         private void TryInitialize()
@@ -144,10 +165,11 @@ namespace OfficeFlipOut.UI
             }
             CanvasScaler existingScaler = GetComponent<CanvasScaler>();
             CanvasScaler scaler = existingScaler != null ? existingScaler : gameObject.AddComponent<CanvasScaler>();
+            canvasScaler = scaler;
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.matchWidthOrHeight = 1f;
             canvas.pixelPerfect = false;
             if (GetComponent<GraphicRaycaster>() == null)
                 gameObject.AddComponent<GraphicRaycaster>();
@@ -155,16 +177,6 @@ namespace OfficeFlipOut.UI
             shell = UIFactory.Rect("ClipboardShell", transform,
                 anchorMin: Vector2.zero, anchorMax: Vector2.one,
                 offsetMin: Vector2.zero, offsetMax: Vector2.zero);
-
-            Vector2 refRes = scaler.referenceResolution;
-            int boardLeftPx = Mathf.RoundToInt(0.115f * refRes.x);
-            int boardRightPx = Mathf.RoundToInt(0.885f * refRes.x);
-            int boardBottomPx = Mathf.RoundToInt(0.055f * refRes.y);
-            int boardTopPx = Mathf.RoundToInt(0.945f * refRes.y);
-            Vector2 boardSizePx = new Vector2(boardRightPx - boardLeftPx, boardTopPx - boardBottomPx);
-
-            float boardCenterDeltaX = (boardLeftPx + boardRightPx) * 0.5f - refRes.x * 0.5f;
-            float boardCenterDeltaYFromBottom = (boardBottomPx + boardTopPx) * 0.5f - refRes.y * 0.5f;
 
             GameObject dimmerGo = UIFactory.Rect("Dimmer", shell.transform,
                 anchorMin: Vector2.zero, anchorMax: Vector2.one,
@@ -176,20 +188,14 @@ namespace OfficeFlipOut.UI
                 UIFactory.Shadow,
                 anchorMin: new Vector2(0.5f, 0.5f),
                 anchorMax: new Vector2(0.5f, 0.5f));
-            RectTransform boardShadowRt = boardShadow.rectTransform;
-            boardShadowRt.sizeDelta = boardSizePx;
-            boardShadowRt.anchoredPosition = new Vector2(
-                38f + boardCenterDeltaX,
-                -10f + boardCenterDeltaYFromBottom);
+            boardShadowRect = boardShadow.rectTransform;
 
             GameObject board = UIFactory.Rect("Board", shell.transform,
                 anchorMin: new Vector2(0.5f, 0.5f),
                 anchorMax: new Vector2(0.5f, 0.5f));
-            RectTransform boardRt = board.GetComponent<RectTransform>();
-            boardRt.sizeDelta = boardSizePx;
-            boardRt.anchoredPosition = new Vector2(
-                30f + boardCenterDeltaX,
-                0f + boardCenterDeltaYFromBottom);
+            boardRect = board.GetComponent<RectTransform>();
+
+            UpdateResponsiveBoardLayout();
 
             board.AddComponent<Image>().color = UIFactory.BoardEdge;
             UIFactory.FilledImage("BoardFace", board.transform, UIFactory.BoardBrown,
@@ -214,28 +220,25 @@ namespace OfficeFlipOut.UI
             // VLG chains fail to propagate heights reliably through nested
             // anchor-stretched rects when the shell first becomes active.
             //
-            // Layout constants (px from paper edge):
-            //   pad=18 lr / 8 tb, gap=4
-            //   top:    tabs(8..48) header(52..92) rule(96..97)
-            //   bottom: footer(8..42) rule(46..47)
-            //   content fills 101..paper-51
+            // Layout constants (px from paper edge) — tuned for 1080p like UI Toolkit clipboard:
+            //   taller tab strip + compact header → more vertical space for directory cards.
             const float pad = 20f;
             const float topPad = 10f;
             const float gap = 6f;
-            float tabsTop = topPad;                         // 10
-            float tabsBot = tabsTop + 48f;                  // 58
-            float headerTop = tabsBot + gap;                // 64
-            float headerBot = headerTop + 74f;              // 138
-            float topRuleTop = headerBot + gap;             // 144
-            float topRuleBot = topRuleTop + 1f;             // 121
-            float contentTop = topRuleBot + gap;            // 127
-            float footerH = 42f;
+            float tabsTop = topPad;
+            float tabsBot = tabsTop + 50f;
+            float headerTop = tabsBot + gap;
+            float headerBot = headerTop + 56f;
+            float topRuleTop = headerBot + gap;
+            float topRuleBot = topRuleTop + 1f;
+            float contentTop = topRuleBot + gap;
+            float footerH = 44f;
             float botPad = 10f;
-            float footerBot = botPad;                       // 10
-            float footerTop = footerBot + footerH;          // 52
-            float botRuleBot = footerTop + gap;             // 46
-            float botRuleTop = botRuleBot + 1f;             // 47
-            float contentBot = botRuleTop + gap;            // 51
+            float footerBot = botPad;
+            float footerTop = footerBot + footerH;
+            float botRuleBot = footerTop + gap;
+            float botRuleTop = botRuleBot + 1f;
+            float contentBot = botRuleTop + gap;
 
             BuildStickyTabs(paper.transform, pad, tabsTop, tabsBot);
             BuildHeader(paper.transform, pad, headerTop, headerBot);
@@ -247,8 +250,52 @@ namespace OfficeFlipOut.UI
             board.transform.Find("TopClip").SetAsLastSibling();
 
             animator = shell.AddComponent<ClipboardAnimator>();
-            animator.Configure(boardRt, boardCG, dimmerCG);
+            animator.Configure(boardRect, boardCG, dimmerCG);
             shell.SetActive(false);
+        }
+
+        private void UpdateResponsiveBoardLayout()
+        {
+            if (boardRect == null || canvasScaler == null) return;
+
+            cachedScreenWidth = Screen.width;
+            cachedScreenHeight = Screen.height;
+
+            float scale = Mathf.Max(0.01f, canvasScaler.scaleFactor);
+            float uiWidth = cachedScreenWidth / scale;
+            float uiHeight = cachedScreenHeight / scale;
+
+            const float minBoardWidth = 980f;
+            const float maxBoardWidth = 1560f;
+            const float minBoardHeight = 680f;
+            const float maxBoardHeight = 980f;
+            const float boardAspect = 1.54f;
+
+            float safeX = Mathf.Max(56f, uiWidth * 0.06f);
+            float safeY = Mathf.Max(36f, uiHeight * 0.05f);
+            float fitWidth = Mathf.Max(minBoardWidth, Mathf.Min(maxBoardWidth, uiWidth - (safeX * 2f)));
+            float fitHeight = Mathf.Max(minBoardHeight, Mathf.Min(maxBoardHeight, uiHeight - (safeY * 2f)));
+
+            float boardWidth = fitWidth;
+            float boardHeight = boardWidth / boardAspect;
+            if (boardHeight > fitHeight)
+            {
+                boardHeight = fitHeight;
+                boardWidth = boardHeight * boardAspect;
+            }
+
+            boardWidth = Mathf.Clamp(boardWidth, minBoardWidth, maxBoardWidth);
+            boardHeight = Mathf.Clamp(boardHeight, minBoardHeight, maxBoardHeight);
+
+            float centerOffsetX = Mathf.Clamp(uiWidth * 0.014f, 18f, 34f);
+            boardRect.sizeDelta = new Vector2(boardWidth, boardHeight);
+            boardRect.anchoredPosition = new Vector2(centerOffsetX, 0f);
+
+            if (boardShadowRect != null)
+            {
+                boardShadowRect.sizeDelta = new Vector2(boardWidth + 8f, boardHeight + 2f);
+                boardShadowRect.anchoredPosition = boardRect.anchoredPosition + new Vector2(10f, -12f);
+            }
         }
 
         private void BuildClip(Transform boardParent)
@@ -303,10 +350,10 @@ namespace OfficeFlipOut.UI
             UIFactory.VerticalGroup(header, TextAnchor.MiddleCenter, 6, expandWidth: true, expandHeight: true);
 
             UIFactory.Label("Title", header.transform, "HR CLIPBOARD",
-                38, FontStyle.Bold, UIFactory.TextDark, TextAnchor.MiddleCenter);
+                32, FontStyle.Bold, UIFactory.TextDark, TextAnchor.MiddleCenter);
             UIFactory.Label("Subtitle", header.transform,
                 "Employee Observation & Incident Log",
-                17, FontStyle.Italic, UIFactory.TextHandwritten, TextAnchor.MiddleCenter);
+                16, FontStyle.Italic, UIFactory.TextHandwritten, TextAnchor.MiddleCenter);
         }
 
         private void BuildContent(Transform paper, float pad, float topInset, float botInset)
@@ -349,12 +396,12 @@ namespace OfficeFlipOut.UI
                 padding: new RectOffset(16, 16, 12, 12));
 
             UIFactory.Label("Title", parent, "OPERATION PROGRESS",
-                22, FontStyle.Bold, UIFactory.TextDark);
+                24, FontStyle.Bold, UIFactory.TextDark);
             UIFactory.DashedLine("Sep", parent);
 
             Text summary = UIFactory.Label("Summary", parent,
                 "Open the Progress tab in UI Toolkit mode for full tracking.\nThis view shows basic status.",
-                14, FontStyle.Italic, UIFactory.TextMedium);
+                15, FontStyle.Italic, UIFactory.TextMedium);
             summary.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             UIFactory.PostItNote("Tip", parent,
@@ -365,11 +412,11 @@ namespace OfficeFlipOut.UI
         {
             UIFactory.VerticalGroup(parent.gameObject, spacing: 16,
                 padding: new RectOffset(16, 16, 16, 16));
-            UIFactory.Label("Title", parent, "OFFICE MAP", 22, FontStyle.Bold, UIFactory.TextDark);
+            UIFactory.Label("Title", parent, "OFFICE MAP", 24, FontStyle.Bold, UIFactory.TextDark);
             UIFactory.DashedLine("Sep", parent);
             Text msg = UIFactory.Label("Message", parent,
                 "Map intel is being compiled.\nCheck back after recon is complete.",
-                15, FontStyle.Italic, UIFactory.TextMedium);
+                16, FontStyle.Italic, UIFactory.TextMedium);
             msg.horizontalOverflow = HorizontalWrapMode.Wrap;
             UIFactory.PostItNote("Tip", parent,
                 "NOTE: Use the Directory tab\nto check employee locations.", -2.2f);
@@ -388,7 +435,7 @@ namespace OfficeFlipOut.UI
             GameObject counterWrap = UIFactory.Rect("CounterWrap", footer.transform);
             LayoutElement cle = counterWrap.AddComponent<LayoutElement>();
             cle.flexibleWidth = 1.4f;
-            cle.minHeight = 42;
+            cle.minHeight = 46;
             pageCounterLabel = UIFactory.PageCounter("PageCounter", counterWrap.transform);
             RectTransform pcRt = pageCounterLabel.GetComponent<RectTransform>();
             pcRt.anchorMin = Vector2.zero;
@@ -399,6 +446,7 @@ namespace OfficeFlipOut.UI
             footerClose = UIFactory.Button("Close", footer.transform, "Close [Tab]",
                 UIFactory.FooterBg, UIFactory.FooterText, 17);
             footerClose.GetComponent<LayoutElement>().flexibleWidth = 0.9f;
+            footerCloseLabel = footerClose.GetComponentInChildren<Text>();
 
             footerNext = UIFactory.Button("Next", footer.transform, "Next Page >",
                 UIFactory.FooterBg, UIFactory.FooterText, 17);
@@ -469,6 +517,7 @@ namespace OfficeFlipOut.UI
             {
                 shell.SetActive(true);
                 shellVisible = true;
+                RequestDeferredLayoutRefresh();
                 if (animator != null) animator.PlayOpen();
             }
             else if (!isOpen && shellVisible)
@@ -487,6 +536,9 @@ namespace OfficeFlipOut.UI
             UpdateStickyTabs(tab);
             UpdateFooter(tab);
             ApplyCursor(isOpen);
+
+            if (isOpen)
+                RequestDeferredLayoutRefresh();
 
             if (isOpen)
             {
@@ -535,6 +587,7 @@ namespace OfficeFlipOut.UI
             {
                 footerPrevious.gameObject.SetActive(true);
                 footerNext.gameObject.SetActive(true);
+                if (footerCloseLabel != null) footerCloseLabel.text = "Close [Tab/Esc]";
 
                 if (dossierOpen)
                 {
@@ -556,6 +609,7 @@ namespace OfficeFlipOut.UI
                 footerPrevious.gameObject.SetActive(false);
                 footerNext.gameObject.SetActive(false);
                 pageCounterLabel.text = "";
+                if (footerCloseLabel != null) footerCloseLabel.text = "Close [Tab/Esc]";
             }
         }
 
@@ -655,6 +709,33 @@ namespace OfficeFlipOut.UI
         private static void SetActive(GameObject go, bool active)
         {
             if (go != null) go.SetActive(active);
+        }
+
+        private void RequestDeferredLayoutRefresh()
+        {
+            if (deferredLayoutRoutine != null)
+                StopCoroutine(deferredLayoutRoutine);
+            deferredLayoutRoutine = StartCoroutine(DeferredLayoutRefreshRoutine());
+        }
+
+        private IEnumerator DeferredLayoutRefreshRoutine()
+        {
+            yield return null;
+            if (shell == null || !shell.activeInHierarchy)
+            {
+                deferredLayoutRoutine = null;
+                yield break;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            if (boardRect != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(boardRect);
+
+            RectTransform shellRt = shell.GetComponent<RectTransform>();
+            if (shellRt != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(shellRt);
+
+            deferredLayoutRoutine = null;
         }
 
         private void EnsureEventSystem()

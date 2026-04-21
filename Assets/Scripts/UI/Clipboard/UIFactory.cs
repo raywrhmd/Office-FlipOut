@@ -172,7 +172,7 @@ namespace OfficeFlipOut.UI
         }
 
         public static Button Button(string name, Transform parent, string labelText,
-            Color bgColor, Color textColor, int fontSize = 16, bool addHover = true)
+            Color bgColor, Color textColor, int fontSize = 17, bool addHover = true)
         {
             GameObject go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -181,6 +181,7 @@ namespace OfficeFlipOut.UI
             bg.color = bgColor;
 
             UnityEngine.UI.Button button = go.AddComponent<UnityEngine.UI.Button>();
+            button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
             ColorBlock colors = button.colors;
             colors.normalColor = Color.white;
             colors.highlightedColor = new Color(1.06f, 1.04f, 1.01f, 1f);
@@ -198,7 +199,8 @@ namespace OfficeFlipOut.UI
             labelRt.offsetMax = Vector2.zero;
 
             LayoutElement le = go.AddComponent<LayoutElement>();
-            le.minHeight = 38;
+            le.minHeight = 44;
+            le.preferredHeight = 44;
 
             if (addHover) go.AddComponent<ButtonHoverPunch>();
             return button;
@@ -245,7 +247,7 @@ namespace OfficeFlipOut.UI
 
         // --- Themed builders ---
 
-        public static Image ColorStrip(string name, Transform parent, Color color, float height = 5f)
+        public static Image ColorStrip(string name, Transform parent, Color color, float height = 8f)
         {
             GameObject go = Rect(name, parent);
             Image img = go.AddComponent<Image>();
@@ -269,7 +271,7 @@ namespace OfficeFlipOut.UI
 
         public static Text PageCounter(string name, Transform parent)
         {
-            return Label(name, parent, "", 16, FontStyle.Italic,
+            return Label(name, parent, "", 17, FontStyle.Italic,
                 TextMuted, TextAnchor.MiddleCenter);
         }
 
@@ -279,7 +281,8 @@ namespace OfficeFlipOut.UI
             tabRoot = Rect(name, parent);
             LayoutElement le = tabRoot.AddComponent<LayoutElement>();
             le.flexibleWidth = 1;
-            le.minHeight = 48;
+            le.minHeight = 52;
+            le.preferredHeight = 52;
 
             FilledImage("TabShadow", tabRoot.transform, TabShadow,
                 anchorMin: Vector2.zero, anchorMax: Vector2.one,
@@ -290,7 +293,7 @@ namespace OfficeFlipOut.UI
             tabRoot.GetComponent<RectTransform>().localRotation =
                 Quaternion.Euler(0f, 0f, rotation);
 
-            Text label = Label("Label", tabRoot.transform, labelText, 18, FontStyle.Bold,
+            Text label = Label("Label", tabRoot.transform, labelText, 20, FontStyle.Bold,
                 TabTextDark, TextAnchor.MiddleCenter);
             label.raycastTarget = false;
             RectTransform labelRt = label.GetComponent<RectTransform>();
@@ -300,6 +303,7 @@ namespace OfficeFlipOut.UI
             labelRt.offsetMax = new Vector2(-4, 0);
 
             UnityEngine.UI.Button button = tabRoot.AddComponent<UnityEngine.UI.Button>();
+            button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
             ColorBlock cb = button.colors;
             cb.normalColor = Color.white;
             cb.highlightedColor = new Color(1.04f, 1.03f, 1.01f, 1f);
@@ -381,7 +385,7 @@ namespace OfficeFlipOut.UI
             // Pin the post-it note to the board
             PushPin(go.transform, new Vector2(0.5f, 0.92f), 28f, 8f);
 
-            Text text = Label("PostItText", go.transform, message, 13, FontStyle.Normal,
+            Text text = Label("PostItText", go.transform, message, 14, FontStyle.Normal,
                 PostItText, TextAnchor.UpperLeft);
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             RectTransform textRt = text.GetComponent<RectTransform>();
@@ -429,13 +433,28 @@ namespace OfficeFlipOut.UI
     {
         private Vector3 baseScale = Vector3.one;
         private Coroutine scaleRoutine;
+        private bool isHovered;
 
         private void Awake() { baseScale = transform.localScale; }
 
-        public void OnPointerEnter(PointerEventData e) { AnimateTo(baseScale * 1.05f, 0.09f); }
-        public void OnPointerExit(PointerEventData e) { AnimateTo(baseScale, 0.09f); }
-        public void OnPointerDown(PointerEventData e) { AnimateTo(baseScale * 0.95f, 0.04f); }
-        public void OnPointerUp(PointerEventData e) { AnimateTo(baseScale * 1.05f, 0.07f); }
+        public void OnPointerEnter(PointerEventData e)
+        {
+            isHovered = true;
+            AnimateTo(baseScale * 1.06f, 0.08f);
+        }
+
+        public void OnPointerExit(PointerEventData e)
+        {
+            isHovered = false;
+            AnimateTo(baseScale, 0.08f);
+        }
+
+        public void OnPointerDown(PointerEventData e) { AnimateTo(baseScale * 0.94f, 0.035f); }
+
+        public void OnPointerUp(PointerEventData e)
+        {
+            AnimateTo(isHovered ? baseScale * 1.06f : baseScale, 0.065f);
+        }
 
         private void AnimateTo(Vector3 target, float duration)
         {

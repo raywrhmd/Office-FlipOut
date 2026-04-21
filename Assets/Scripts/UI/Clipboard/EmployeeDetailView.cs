@@ -99,7 +99,7 @@ namespace OfficeFlipOut.UI
 
             // Color identity banner
             colorBanner = UIFactory.ColorStrip("ColorBanner", transform,
-                UIFactory.PortraitPlaceholder, 6f);
+                UIFactory.PortraitPlaceholder, 8f);
 
             // Folder tab sticking out on the right
             folderTab = UIFactory.FilledImage("FolderTab", transform,
@@ -153,20 +153,20 @@ namespace OfficeFlipOut.UI
             identityCol.AddComponent<LayoutElement>().flexibleWidth = 1;
 
             nameLabel = UIFactory.Label("Name", identityCol.transform, "",
-                22, FontStyle.Bold, UIFactory.TextDark);
+                24, FontStyle.Bold, UIFactory.TextDark);
 
             GameObject roleRow = UIFactory.Rect("RoleRow", identityCol.transform);
             UIFactory.HorizontalGroup(roleRow, TextAnchor.MiddleLeft, 10, expandHeight: false);
 
             roleLabel = UIFactory.Label("Role", roleRow.transform, "",
-                14, FontStyle.Normal, UIFactory.TextSubtle);
+                15, FontStyle.Normal, UIFactory.TextSubtle);
             roleLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
             difficultyTag = UIFactory.Label("Difficulty", roleRow.transform, "",
-                12, FontStyle.Bold, UIFactory.TextMuted, TextAnchor.MiddleRight);
+                13, FontStyle.Bold, UIFactory.TextMuted, TextAnchor.MiddleRight);
 
             personalityLabel = UIFactory.Label("Personality", identityCol.transform, "",
-                14, FontStyle.Italic, UIFactory.TextHandwritten);
+                15, FontStyle.Italic, UIFactory.TextHandwritten);
             personalityLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             personalityLabel.verticalOverflow = VerticalWrapMode.Overflow;
 
@@ -174,17 +174,18 @@ namespace OfficeFlipOut.UI
             statusRow = UIFactory.Rect("StatusRow", identityCol.transform);
             UIFactory.HorizontalGroup(statusRow, TextAnchor.MiddleLeft, 0,
                 expandHeight: false, expandWidth: false);
-            statusRow.AddComponent<LayoutElement>().preferredHeight = 22;
+            statusRow.AddComponent<LayoutElement>().preferredHeight = 26;
 
             GameObject badge = UIFactory.Rect("Badge", statusRow.transform);
             statusBadgeBg = badge.AddComponent<Image>();
             statusBadgeBg.color = UIFactory.StatusActive;
             LayoutElement bLE = badge.AddComponent<LayoutElement>();
             bLE.minWidth = 100;
-            bLE.preferredHeight = 20;
+            bLE.preferredHeight = 24;
+            bLE.minHeight = 24;
 
             statusBadgeText = UIFactory.Label("BadgeText", badge.transform, "ACTIVE",
-                12, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter);
+                13, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter);
             RectTransform btRt = statusBadgeText.GetComponent<RectTransform>();
             btRt.anchorMin = Vector2.zero;
             btRt.anchorMax = Vector2.one;
@@ -194,10 +195,10 @@ namespace OfficeFlipOut.UI
             // Lock banner
             lockBanner = UIFactory.Rect("LockBanner", identityCol.transform);
             lockBanner.AddComponent<Image>().color = UIFactory.LockBadge;
-            lockBanner.AddComponent<LayoutElement>().minHeight = 30;
+            lockBanner.AddComponent<LayoutElement>().minHeight = 32;
             lockText = UIFactory.Label("LockText", lockBanner.transform,
                 "LOCKED - Flip all coworkers to unlock",
-                13, FontStyle.Bold, UIFactory.LockBadgeText, TextAnchor.MiddleCenter);
+                14, FontStyle.Bold, UIFactory.LockBadgeText, TextAnchor.MiddleCenter);
             RectTransform ltRt = lockText.GetComponent<RectTransform>();
             ltRt.anchorMin = Vector2.zero;
             ltRt.anchorMax = Vector2.one;
@@ -218,18 +219,18 @@ namespace OfficeFlipOut.UI
             leftCol.AddComponent<LayoutElement>().flexibleWidth = 1;
 
             likesHeader = UIFactory.Label("LikesH", leftCol.transform, "LIKES",
-                13, FontStyle.Bold, UIFactory.TextSubtle);
+                14, FontStyle.Bold, UIFactory.TextSubtle);
             likesLabel = UIFactory.Label("Likes", leftCol.transform, "",
-                15, FontStyle.Normal, UIFactory.TextMedium);
+                16, FontStyle.Normal, UIFactory.TextMedium);
             likesLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             likesLabel.verticalOverflow = VerticalWrapMode.Overflow;
 
             UIFactory.DashedLine("LikesSep", leftCol.transform);
 
             dislikesHeader = UIFactory.Label("DislikesH", leftCol.transform, "DISLIKES",
-                13, FontStyle.Bold, UIFactory.RedPen);
+                14, FontStyle.Bold, UIFactory.RedPen);
             dislikesLabel = UIFactory.Label("Dislikes", leftCol.transform, "",
-                15, FontStyle.Normal, UIFactory.TextMedium);
+                16, FontStyle.Normal, UIFactory.TextMedium);
             dislikesLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             dislikesLabel.verticalOverflow = VerticalWrapMode.Overflow;
 
@@ -239,7 +240,7 @@ namespace OfficeFlipOut.UI
             UIFactory.DashedLine("HintSep", leftCol.transform);
 
             hintLabel = UIFactory.Label("Hint", leftCol.transform, "",
-                14, FontStyle.Italic, new Color32(120, 92, 48, 255));
+                15, FontStyle.Italic, new Color32(120, 92, 48, 255));
             hintLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             hintLabel.verticalOverflow = VerticalWrapMode.Overflow;
 
@@ -249,21 +250,21 @@ namespace OfficeFlipOut.UI
             rightCol.AddComponent<LayoutElement>().flexibleWidth = 1;
 
             locationLabel = UIFactory.Label("Location", rightCol.transform, "",
-                15, FontStyle.Bold, UIFactory.TextDark);
+                16, FontStyle.Bold, UIFactory.TextDark);
 
             UIFactory.DashedLine("SchedSep", rightCol.transform);
 
             scheduleHeader = UIFactory.Label("SchedH", rightCol.transform, "DAILY ROUTINE",
-                13, FontStyle.Bold, UIFactory.TextSubtle);
+                14, FontStyle.Bold, UIFactory.TextSubtle);
             scheduleLabel = UIFactory.Label("Schedule", rightCol.transform, "",
-                14, FontStyle.Normal, UIFactory.TextMedium);
+                15, FontStyle.Normal, UIFactory.TextMedium);
             scheduleLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             scheduleLabel.verticalOverflow = VerticalWrapMode.Overflow;
 
             // Back button
             UIFactory.DashedLine("BottomSep", body.transform);
             backButton = UIFactory.Button("BackBtn", body.transform,
-                "< Back to Directory", UIFactory.ButtonBrown, UIFactory.ButtonBrownText, 15);
+                "< Back to Directory", UIFactory.ButtonBrown, UIFactory.ButtonBrownText, 16);
             backButton.onClick.AddListener(() => BackRequested?.Invoke());
         }
 

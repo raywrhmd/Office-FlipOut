@@ -426,15 +426,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9000919888905548353, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -3.6737392
+      value: -4
       objectReference: {fileID: 0}
     - target: {fileID: 9000919888905548353, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.43
+      value: -0.7
       objectReference: {fileID: 0}
     - target: {fileID: 9000919888905548353, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -3.3192415
+      value: -3.7
       objectReference: {fileID: 0}
     - target: {fileID: 9000919888905548353, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
       propertyPath: m_LocalRotation.w
@@ -468,7 +468,10 @@ PrefabInstance:
     - {fileID: 4990656445263543006, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
     - {fileID: 6777407993348767490, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 9000919888905548353, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1742948465}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 801615841612843178, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
       insertIndex: -1
@@ -2598,6 +2601,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSignalSendToConsole: 1
+  showHoverHintIcon: 1
+  hoverHintVerticalOffset: 0.8
+  hoverHintScale: 0.05
+  hoverHintSprite: {fileID: 21300000, guid: 1ecac064c0e34fd38c7b8eee2e64ef46, type: 3}
+  hoverHintAnchor: {fileID: 1742948465}
+  hideHintWhenLocked: 1
 --- !u!1001 &1170156720
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2703,6 +2712,37 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
+--- !u!1 &1171961767
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1171961768}
+  m_Layer: 0
+  m_Name: hoverhint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1171961768
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1171961767}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.0613, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 913726204}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1206426087
 GameObject:
   m_ObjectHideFlags: 0
@@ -2833,6 +2873,45 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!1 &1257225281 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 801615841612843178, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
+  m_PrefabInstance: {fileID: 1993107302}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1257225287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1257225281}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf536c522f4594d1ab01d8f9d434da03, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RageInteractionPropSignal
+  signalEventType: 3
+  targetRageMeter: {fileID: 0}
+  targetNpcForSignalId: {fileID: 0}
+  targetNpcId: 
+  sendOnTriggerEnter: 0
+  requiredTag: 
+  sendOnDistanceFromOrigin: 0
+  requiredDistanceFromOrigin: 1.5
+  horizontalDistanceOnly: 0
+  distanceTriggerOnlyOnce: 0
+  sendCooldown: 0.1
+  sendOnlyOnce: 0
+  onSignalSent:
+    m_PersistentCalls:
+      m_Calls: []
+  logSignalSendToConsole: 1
+  showHoverHintIcon: 1
+  hoverHintVerticalOffset: 0.8
+  hoverHintScale: 0.05
+  hoverHintSprite: {fileID: 21300000, guid: 1ecac064c0e34fd38c7b8eee2e64ef46, type: 3}
+  hoverHintAnchor: {fileID: 0}
+  hideHintWhenLocked: 1
 --- !u!1001 &1272684816
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2992,6 +3071,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSignalSendToConsole: 1
+  showHoverHintIcon: 1
+  hoverHintVerticalOffset: 0.8
+  hoverHintScale: 0.2
+  hoverHintSprite: {fileID: 0}
+  hoverHintAnchor: {fileID: 0}
+  hideHintWhenLocked: 1
 --- !u!1 &1560692517
 GameObject:
   m_ObjectHideFlags: 0
@@ -3820,6 +3905,37 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!1 &1742948464
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1742948465}
+  m_Layer: 0
+  m_Name: hoverhint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1742948465
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1742948464}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.712, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 935440048}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1754001550
 GameObject:
   m_ObjectHideFlags: 0
@@ -4349,7 +4465,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 9000919888905548353, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1171961768}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 801615841612843178, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
       insertIndex: -1
@@ -4388,6 +4507,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSignalSendToConsole: 1
+  showHoverHintIcon: 1
+  hoverHintVerticalOffset: 0.8
+  hoverHintScale: 0.01
+  hoverHintSprite: {fileID: 21300000, guid: 1ecac064c0e34fd38c7b8eee2e64ef46, type: 3}
+  hoverHintAnchor: {fileID: 1171961768}
+  hideHintWhenLocked: 1
 --- !u!43 &1847465714
 Mesh:
   m_ObjectHideFlags: 0
@@ -4981,11 +5106,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9000919888905548353, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -1.763
+      value: -1.76
       objectReference: {fileID: 0}
     - target: {fileID: 9000919888905548353, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.24
+      value: -0.26
       objectReference: {fileID: 0}
     - target: {fileID: 9000919888905548353, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
       propertyPath: m_LocalPosition.z
@@ -5022,7 +5147,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 801615841612843178, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1257225287}
   m_SourcePrefab: {fileID: 100100000, guid: 80ba7f5f21c2d42df8835c824c1989ff, type: 3}
 --- !u!1 &2048026790
 GameObject:
