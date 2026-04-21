@@ -1,5 +1,40 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/Resources/UI/Clipboard/ClipboardStyles.uss?fileID=7433441132597879392&amp;guid=c056e806b68a040918cebe01ed3fcf17&amp;type=3#ClipboardStyles"/>
+    <ui:VisualElement name="ToolkitRoot" class="toolkit-root">
+    <ui:VisualElement name="MainMenuShell" class="clipboard-shell">
+        <ui:VisualElement name="MainMenuDimmer" class="dimmer"/>
+        <ui:VisualElement name="MainMenuBoard" class="board">
+            <ui:VisualElement class="board-shadow"/>
+            <ui:VisualElement class="board-face">
+                <ui:VisualElement class="clipboard-clip"/>
+                <ui:VisualElement name="MainMenuPaper" class="paper">
+                    <ui:VisualElement name="MainMenuRuledLines" class="ruled-lines"/>
+                    <ui:VisualElement class="margin-line"/>
+                    <ui:VisualElement class="tape-strip tape-top-left"/>
+                    <ui:VisualElement class="tape-strip tape-bottom-right"/>
+                    <ui:VisualElement class="coffee-ring"/>
+                    <ui:VisualElement class="board-paper-clip"/>
+                    <ui:VisualElement class="paper-content main-menu-paper-content">
+                        <ui:VisualElement class="header main-menu-header">
+                            <ui:VisualElement name="MainMenuTitleImage" class="main-menu-title-image"/>
+                            <ui:Label name="MainMenuTitleFallback" class="title main-menu-title-fallback" text="OFFICE FLIP OUT"/>
+                            <ui:Label name="MainMenuSubtitle" class="subtitle" text="Confidential Clipboard. Cause chaos. Flip out the office."/>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="top-rule main-menu-top-rule"/>
+                        <ui:VisualElement class="bottom-rule main-menu-bottom-rule"/>
+                        <ui:VisualElement class="content main-menu-body">
+                            <ui:Label class="main-menu-tagline" text="HR-approved stress relief simulator."/>
+                            <ui:Label class="main-menu-helper" text="Press Enter to Start"/>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="footer main-menu-footer">
+                            <ui:Button name="MainMenuStart" class="footer-btn footer-btn-nav main-menu-start-btn" text="Start Game"/>
+                            <ui:Button name="MainMenuQuit" class="footer-btn footer-btn-nav main-menu-quit-btn" text="Quit Game"/>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
     <ui:VisualElement name="ClipboardShell" class="clipboard-shell">
         <ui:VisualElement name="Dimmer" class="dimmer"/>
         <ui:VisualElement name="Board" class="board">
@@ -230,5 +265,10 @@
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="ClipboardHint" class="clipboard-hint">
+        <ui:VisualElement class="clipboard-hint-icon"/>
+        <ui:Label class="clipboard-hint-key" text="Tab"/>
+    </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

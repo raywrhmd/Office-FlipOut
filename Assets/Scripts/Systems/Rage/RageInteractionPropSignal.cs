@@ -1,19 +1,23 @@
 using UnityEngine;
-using UnityEngine.Events;
 
 public enum RageSignalEventType
 {
     SpillDrinkOnDesk = 0,
     MicrowaveFish = 1,
-    TakeStaplerFromDesk = 2,
-    NoSignal = 3
+    StealObject = 2,
+    NoSignal = 3,
+    MicrowaveFishItem = 4,
+    KnockOver = 5,
+    BringObjectNear = 6
 }
 
 public static class RageSignalIds
 {
     public const string SpillDrinkOnDesk = "spill_drink_on_desk";
     public const string MicrowaveFish = "microwave_fish";
-    public const string TakeStaplerFromDesk = "take_stapler_from_desk";
+    public const string StealObject = "steal_object";
+    public const string KnockOver = "knock_over";
+    public const string BringObjectNear = "bring_object_near";
 }
 
 [DisallowMultipleComponent]
@@ -24,28 +28,31 @@ public class RageInteractionPropSignal : MonoBehaviour
     [SerializeField] private RageSignalEventType signalEventType = RageSignalEventType.SpillDrinkOnDesk;
 
     [Header("Target")]
-    [Tooltip("Optional: direct NPC target. If set, signal is sent directly to this Rage_Meter.")]
-    [SerializeField] private Rage_Meter targetRageMeter;
-    [Tooltip("Optional: drag an NPC Rage_Meter here to auto-use its NPC signal id when broadcasting.")]
-    [SerializeField] private Rage_Meter targetNpcForSignalId;
-    [Tooltip("Used only when no direct target is assigned and no NPC reference is set.")]
-    [SerializeField] private string targetNpcId;
+    [Tooltip("Optional: drag the target NPC Rage_Meter here. Leave empty for global broadcast.")]
+    [SerializeField] private Rage_Meter targetNpc;
+    [Tooltip("If true, sends to all NPCs when no target is assigned. Keep false to avoid accidental global rage.")]
+    [SerializeField] private bool allowGlobalBroadcastWhenTargetMissing = false;
 
-    [Header("Activation")]
-    [SerializeField] private bool sendOnTriggerEnter = true;
-    [Tooltip("Optional: leave empty to allow any collider.")]
-    [SerializeField] private string requiredTag;
-    [SerializeField] private bool sendOnDistanceFromOrigin;
-    [SerializeField, Min(0.01f)] private float requiredDistanceFromOrigin = 1.5f;
-    [SerializeField] private bool horizontalDistanceOnly;
-    [SerializeField] private bool distanceTriggerOnlyOnce = true;
+    [Header("Steal Object Distance Trigger")]
+    [SerializeField, Min(0.01f)] private float stealObjectRequiredDistanceFromOrigin = 0.15f;
+    [SerializeField] private bool stealObjectHorizontalDistanceOnly = true;
+    [SerializeField] private bool stealObjectTriggerOnlyOnce = true;
+
+    [Header("Bring Object Near Trigger")]
+    [Tooltip("When this object comes near the assigned Target NPC, trigger this rage signal.")]
+    [SerializeField, Min(0.01f)] private float bringNearRequiredDistance = 1f;
+    [SerializeField] private bool bringNearHorizontalDistanceOnly = true;
+    [SerializeField] private bool bringNearTriggerOnlyOnce = true;
+
+    [Header("Knock Over Interaction")]
+    [SerializeField] private bool knockOverOnlyOnce = true;
+    [SerializeField, Min(0f)] private float knockOverImpulseForce = 2.5f;
+    [SerializeField, Min(0f)] private float knockOverTorqueForce = 3.5f;
+    [SerializeField] private Vector3 knockOverLocalTorqueAxis = Vector3.right;
 
     [Header("Limits")]
     [SerializeField, Min(0f)] private float sendCooldown = 0.1f;
     [SerializeField] private bool sendOnlyOnce;
-
-    [Header("Events")]
-    [SerializeField] private UnityEvent onSignalSent;
 
     [Header("Debug")]
     [SerializeField] private bool logSignalSendToConsole = true;
@@ -64,6 +71,8 @@ public class RageInteractionPropSignal : MonoBehaviour
 
     private bool hasSent;
     private bool hasTriggeredDistanceSignal;
+    private bool hasTriggeredBringNearSignal;
+    private bool hasKnockedOver;
     private float lastSendTime = -999f;
     private Vector3 originPosition;
     private Camera cachedMainCamera;
@@ -72,7 +81,6 @@ public class RageInteractionPropSignal : MonoBehaviour
     private CoffeeSpillLockedItem coffeeLock;
     private MicrowaveLockedItem microwaveLock;
     private bool loggedMissingSpriteWarning;
-
     private void Awake()
     {
         originPosition = transform.position;
@@ -84,30 +92,62 @@ public class RageInteractionPropSignal : MonoBehaviour
     {
         UpdateHoverHintVisibility();
 
-        if (!sendOnDistanceFromOrigin)
+        if (!UsesDistanceActivation())
         {
             return;
         }
 
-        if (distanceTriggerOnlyOnce && hasTriggeredDistanceSignal)
+        if (signalEventType == RageSignalEventType.StealObject)
         {
+            if (stealObjectTriggerOnlyOnce && hasTriggeredDistanceSignal)
+            {
+                return;
+            }
+
+            Vector3 displacement = transform.position - originPosition;
+            if (stealObjectHorizontalDistanceOnly)
+            {
+                displacement.y = 0f;
+            }
+
+            float requiredDistanceSquared = stealObjectRequiredDistanceFromOrigin * stealObjectRequiredDistanceFromOrigin;
+            if (displacement.sqrMagnitude < requiredDistanceSquared)
+            {
+                return;
+            }
+
+            hasTriggeredDistanceSignal = true;
+            TrySendSignal("distance-from-origin threshold exceeded");
             return;
         }
 
-        Vector3 displacement = transform.position - originPosition;
-        if (horizontalDistanceOnly)
+        if (signalEventType == RageSignalEventType.BringObjectNear)
         {
-            displacement.y = 0f;
-        }
+            if (bringNearTriggerOnlyOnce && hasTriggeredBringNearSignal)
+            {
+                return;
+            }
 
-        float requiredDistanceSquared = requiredDistanceFromOrigin * requiredDistanceFromOrigin;
-        if (displacement.sqrMagnitude < requiredDistanceSquared)
-        {
-            return;
-        }
+            if (targetNpc == null)
+            {
+                return;
+            }
 
-        hasTriggeredDistanceSignal = true;
-        TrySendSignal("distance-from-origin threshold exceeded");
+            Vector3 toTargetNpc = targetNpc.transform.position - transform.position;
+            if (bringNearHorizontalDistanceOnly)
+            {
+                toTargetNpc.y = 0f;
+            }
+
+            float requiredDistanceSquared = bringNearRequiredDistance * bringNearRequiredDistance;
+            if (toTargetNpc.sqrMagnitude > requiredDistanceSquared)
+            {
+                return;
+            }
+
+            hasTriggeredBringNearSignal = true;
+            TrySendSignal("interaction prop brought near target npc");
+        }
     }
 
     private void LateUpdate()
@@ -120,19 +160,69 @@ public class RageInteractionPropSignal : MonoBehaviour
         TrySendSignal("Interact() called");
     }
 
+    public bool CanPerformKnockOver(Collider hitCollider = null)
+    {
+        if (signalEventType != RageSignalEventType.KnockOver)
+        {
+            return false;
+        }
+
+        if (knockOverOnlyOnce && hasKnockedOver)
+        {
+            return false;
+        }
+
+        return ResolveKnockOverRigidbody(hitCollider) != null;
+    }
+
+    public bool TryPerformKnockOver(Transform interactor = null, Collider hitCollider = null, Vector3? hitPoint = null)
+    {
+        if (!CanPerformKnockOver(hitCollider))
+        {
+            return false;
+        }
+
+        Rigidbody targetBody = ResolveKnockOverRigidbody(hitCollider);
+        if (targetBody == null)
+        {
+            return false;
+        }
+
+        targetBody.useGravity = true;
+        targetBody.isKinematic = false;
+
+        Vector3 impulseDirection = interactor != null ? interactor.forward : transform.forward;
+        impulseDirection.y = 0f;
+        if (impulseDirection.sqrMagnitude < 0.0001f)
+        {
+            impulseDirection = transform.right;
+        }
+
+        impulseDirection.Normalize();
+
+        if (knockOverImpulseForce > 0f)
+        {
+            Vector3 forcePoint = hitPoint ?? targetBody.worldCenterOfMass;
+            targetBody.AddForceAtPosition(impulseDirection * knockOverImpulseForce, forcePoint, ForceMode.Impulse);
+        }
+
+        if (knockOverTorqueForce > 0f)
+        {
+            Vector3 axis = knockOverLocalTorqueAxis.sqrMagnitude > 0.0001f
+                ? knockOverLocalTorqueAxis.normalized
+                : Vector3.right;
+            Vector3 worldAxis = transform.TransformDirection(axis);
+            targetBody.AddTorque(worldAxis * knockOverTorqueForce, ForceMode.Impulse);
+        }
+
+        hasKnockedOver = true;
+        TrySendSignal("knock-over interaction");
+        return true;
+    }
+
     private void OnTriggerEnter(Collider other)
     {
-        if (!sendOnTriggerEnter)
-        {
-            return;
-        }
-
-        if (!PassesTagFilter(other.gameObject))
-        {
-            return;
-        }
-
-        TrySendSignal("trigger enter by " + other.gameObject.name);
+        // Trigger-enter activation is not used for current rage prop interactions.
     }
 
     [ContextMenu("Debug/Send Rage Signal")]
@@ -151,19 +241,9 @@ public class RageInteractionPropSignal : MonoBehaviour
         TrySendSpecificSignal(RageSignalIds.MicrowaveFish, "SendMicrowaveFishSignal() called");
     }
 
-    public void SendTakeStaplerSignal()
+    public void SendStealObjectSignal()
     {
-        TrySendSpecificSignal(RageSignalIds.TakeStaplerFromDesk, "SendTakeStaplerSignal() called");
-    }
-
-    private bool PassesTagFilter(GameObject other)
-    {
-        if (string.IsNullOrWhiteSpace(requiredTag))
-        {
-            return true;
-        }
-
-        return other.CompareTag(requiredTag);
+        TrySendSpecificSignal(RageSignalIds.StealObject, "SendStealObjectSignal() called");
     }
 
     private void TrySendSignal()
@@ -198,39 +278,41 @@ public class RageInteractionPropSignal : MonoBehaviour
             return;
         }
 
-        if (targetRageMeter == null && targetNpcForSignalId != null && string.IsNullOrWhiteSpace(targetNpcForSignalId.NpcSignalId))
+        if (targetNpc != null && string.IsNullOrWhiteSpace(targetNpc.NpcSignalId))
         {
             if (logSignalSendToConsole)
             {
                 Debug.LogWarning(
                     "[RageInteractionPropSignal] " + name +
-                    " did not send signal '" + resolvedSignalId +
-                    "' because targetNpcForSignalId is set but its NpcSignalId is empty.",
+                    " has target NPC assigned but its NpcSignalId is empty.",
                     this);
             }
 
             return;
         }
 
-        string targetInfo;
+        if (targetNpc == null && !allowGlobalBroadcastWhenTargetMissing)
+        {
+            if (logSignalSendToConsole)
+            {
+                Debug.LogWarning(
+                    "[RageInteractionPropSignal] " + name +
+                    " did not send signal '" + resolvedSignalId +
+                    "' because no target NPC is assigned.",
+                    this);
+            }
 
-        if (targetRageMeter != null)
-        {
-            targetRageMeter.ReceiveSignal(resolvedSignalId);
-            targetInfo = "direct Rage_Meter: " + targetRageMeter.name;
+            return;
         }
-        else
-        {
-            string resolvedTargetNpcId = ResolveTargetNpcId();
-            RageSignalHub.RaiseSignal(resolvedSignalId, resolvedTargetNpcId);
-            targetInfo = string.IsNullOrWhiteSpace(resolvedTargetNpcId)
-                ? "global broadcast"
-                : "target npc id: " + resolvedTargetNpcId;
-        }
+
+        string resolvedTargetNpcId = ResolveTargetNpcId();
+        RageSignalHub.RaiseSignal(resolvedSignalId, resolvedTargetNpcId);
+        string targetInfo = string.IsNullOrWhiteSpace(resolvedTargetNpcId)
+            ? "global broadcast"
+            : "target npc id: " + resolvedTargetNpcId;
 
         hasSent = true;
         lastSendTime = Time.time;
-        onSignalSent?.Invoke();
 
         if (logSignalSendToConsole)
         {
@@ -251,9 +333,14 @@ public class RageInteractionPropSignal : MonoBehaviour
                 return RageSignalIds.SpillDrinkOnDesk;
             case RageSignalEventType.MicrowaveFish:
                 return RageSignalIds.MicrowaveFish;
-            case RageSignalEventType.TakeStaplerFromDesk:
-                return RageSignalIds.TakeStaplerFromDesk;
+            case RageSignalEventType.StealObject:
+                return RageSignalIds.StealObject;
+            case RageSignalEventType.KnockOver:
+                return RageSignalIds.KnockOver;
+            case RageSignalEventType.BringObjectNear:
+                return RageSignalIds.BringObjectNear;
             case RageSignalEventType.NoSignal:
+            case RageSignalEventType.MicrowaveFishItem:
                 return string.Empty;
             default:
                 return string.Empty;
@@ -262,12 +349,12 @@ public class RageInteractionPropSignal : MonoBehaviour
 
     private string ResolveTargetNpcId()
     {
-        if (targetNpcForSignalId != null && !string.IsNullOrWhiteSpace(targetNpcForSignalId.NpcSignalId))
+        if (targetNpc == null)
         {
-            return targetNpcForSignalId.NpcSignalId;
+            return string.Empty;
         }
 
-        return targetNpcId;
+        return targetNpc.NpcSignalId;
     }
 
     [ContextMenu("Debug/Set Current Position As Origin")]
@@ -443,4 +530,42 @@ public class RageInteractionPropSignal : MonoBehaviour
 
         hoverHintTransform.rotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
     }
+
+    private bool UsesDistanceActivation()
+    {
+        return signalEventType == RageSignalEventType.StealObject ||
+               signalEventType == RageSignalEventType.BringObjectNear;
+    }
+
+    private Rigidbody ResolveKnockOverRigidbody(Collider hitCollider)
+    {
+        if (hitCollider != null)
+        {
+            if (hitCollider.attachedRigidbody != null)
+            {
+                return hitCollider.attachedRigidbody;
+            }
+
+            Rigidbody fromHitParent = hitCollider.GetComponentInParent<Rigidbody>();
+            if (fromHitParent != null)
+            {
+                return fromHitParent;
+            }
+        }
+
+        Rigidbody localBody = GetComponent<Rigidbody>();
+        if (localBody != null)
+        {
+            return localBody;
+        }
+
+        Rigidbody parentBody = GetComponentInParent<Rigidbody>();
+        if (parentBody != null)
+        {
+            return parentBody;
+        }
+
+        return GetComponentInChildren<Rigidbody>();
+    }
+
 }

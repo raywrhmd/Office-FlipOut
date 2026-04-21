@@ -546,12 +546,14 @@
 
 .rage-face-badge {
     position: absolute;
-    right: -4px;
-    bottom: -4px;
-    width: 36px;
-    height: 36px;
-    background-color: rgba(255, 255, 255, 0.86);
-    border-radius: 4px;
+    right: 4px;
+    top: 4px;
+    width: 56px;
+    height: 56px;
+    background-color: rgba(248, 244, 235, 0.92);
+    border-width: 1px;
+    border-color: rgba(82, 66, 48, 0.35);
+    border-radius: 28px;
     -unity-background-scale-mode: scale-to-fit;
 }
 
@@ -750,7 +752,7 @@
 /* Name + difficulty on one row (matches staff cards) */
 .detail-name-row {
     flex-direction: row;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     width: 100%;
     margin-bottom: 4px;
@@ -1258,17 +1260,183 @@
    Input polish — keyboard / controller navigation (UI Toolkit)
    =================================================================== */
 
-/* :focus (not :focus-visible — older Unity USS does not support focus-visible) */
+/* Keep focus state visually neutral to avoid persistent click outlines. */
 Button:focus {
-    outline-width: 2px;
-    outline-style: solid;
-    outline-color: rgb(55, 105, 175);
-    outline-offset: 3px;
+    border-width: 0;
 }
 
 ScrollView:focus {
-    outline-width: 2px;
-    outline-style: solid;
-    outline-color: rgba(55, 105, 175, 0.65);
-    outline-offset: 2px;
+    border-width: 0;
+}
+
+/* ===================================================================
+   Toolkit root (wraps main menu + clipboard shells)
+   =================================================================== */
+
+.toolkit-root {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+/* Subtle gameplay affordance: bottom-left key hint for opening clipboard. */
+.clipboard-hint {
+    position: absolute;
+    left: 22px;
+    bottom: 18px;
+    width: 88px;
+    height: 122px;
+    padding: 8px 6px 10px;
+    border-radius: 8px;
+    background-color: rgba(248, 244, 235, 0.9);
+    border-width: 1px;
+    border-color: rgba(90, 72, 52, 0.38);
+    justify-content: flex-end;
+    align-items: center;
+    -unity-text-outline-width: 0;
+
+    opacity: 0;
+    translate: 0 10px;
+    pointer-events: none;
+
+    transition-property: opacity, translate;
+    transition-duration: 220ms, 220ms;
+    transition-timing-function: ease-out, ease-out;
+}
+
+.clipboard-hint.clipboard-hint--visible {
+    opacity: 1;
+    translate: 0 0;
+    pointer-events: auto;
+}
+
+.clipboard-hint-icon {
+    width: 56px;
+    height: 74px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    background-image: resource('UI/Clipboard/clipboard_clip');
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: 0.95;
+}
+
+.clipboard-hint-key {
+    min-width: 56px;
+    min-height: 28px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(90, 72, 52, 0.35);
+    background-color: rgba(255, 252, 246, 0.92);
+    color: rgb(48, 38, 28);
+    font-size: 15px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/* ===================================================================
+   Main menu (same board/paper system as clipboard)
+   =================================================================== */
+
+.main-menu-paper-content {
+    overflow: visible;
+}
+
+.main-menu-header {
+    top: 10px;
+    height: 268px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.main-menu-title-image {
+    position: absolute;
+    left: 48px;
+    right: 48px;
+    top: 42px;
+    height: 200px;
+    -unity-background-scale-mode: scale-to-fit;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.main-menu-header .subtitle {
+    position: absolute;
+    left: 48px;
+    right: 48px;
+    bottom: 6px;
+}
+
+.main-menu-title-fallback {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    top: 56px;
+    font-size: 36px;
+}
+
+.main-menu-title-fallback.hidden-title-fallback {
+    display: none;
+}
+
+.main-menu-top-rule {
+    top: 288px;
+}
+
+.main-menu-bottom-rule {
+    bottom: 48px;
+}
+
+.main-menu-body.content {
+    top: 300px;
+    bottom: 52px;
+    padding: 16px 28px 8px 28px;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.main-menu-tagline {
+    font-size: 17px;
+    -unity-font-style: italic;
+    color: rgb(88, 78, 64);
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.main-menu-helper {
+    margin-top: 12px;
+    font-size: 14px;
+    color: rgb(105, 92, 75);
+    -unity-font-style: italic;
+    -unity-text-align: middle-center;
+}
+
+.main-menu-footer {
+    justify-content: center;
+    align-items: stretch;
+}
+
+.main-menu-footer .footer-btn {
+    flex-grow: 0;
+    min-width: 180px;
+    max-width: 320px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.main-menu-start-btn {
+    min-width: 250px;
+    font-size: 19px;
+    background-color: rgb(170, 225, 170);
+    color: rgb(34, 58, 36);
+}
+
+.main-menu-start-btn:hover {
+    scale: 1.08 1.08;
+}
+
+.main-menu-quit-btn {
+    background-color: rgb(130, 116, 98);
+    color: rgb(240, 228, 210);
 }

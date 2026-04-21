@@ -25,6 +25,11 @@ public class PhysicsGrab : MonoBehaviour
     public float fishAutoSnapDistance = 1f;
     public Vector3 fishSnapLocalPosition = new Vector3(0f, 0.08f, 0f);
     public Vector3 fishSnapLocalEulerAngles = Vector3.zero;
+    [Header("Fish Throw Microwave Snap")]
+    public bool allowThrownFishMicrowaveSnap = true;
+    public float thrownFishSnapDistance = 0.9f;
+    public float thrownFishSnapMinSpeed = 3f;
+    public float thrownFishSnapLifetime = 3f;
 
     [Header("Coffee Spill Rage")]
     public bool enableCoffeeSpillRage = true;
@@ -111,7 +116,11 @@ public class PhysicsGrab : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit, grabDistance))
         {
-            Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
+            Rigidbody rb = hit.collider.attachedRigidbody;
+            if (rb == null)
+            {
+                rb = hit.collider.GetComponentInParent<Rigidbody>();
+            }
 
             if (rb != null && !IsLockedInMicrowave(rb) && !IsLockedInCoffeeSpill(rb))
             {
@@ -151,14 +160,19 @@ public class PhysicsGrab : MonoBehaviour
                     return false;
                 }
 
-                string heldName = heldObject.name.ToLowerInvariant();
-                if (!heldName.Contains(fishNameToken.ToLowerInvariant()))
+                if (!IsFishObject(heldObject))
                 {
                     return false;
                 }
             }
 
-            signal.Interact();
+            if (heldObject == null || !IsFishObject(heldObject))
+            {
+                return false;
+            }
+
+            LockFishIntoMicrowave(heldObject, signal);
+            heldObject = null;
             return true;
         }
 
@@ -203,6 +217,19 @@ public class PhysicsGrab : MonoBehaviour
                 heldObject = null;
             }
             return true;
+        }
+
+        // Knock over: push/tip the target rigidbody when pressing E.
+        if (signal.SignalEventType == RageSignalEventType.KnockOver)
+        {
+            bool knockedOver = signal.TryPerformKnockOver(
+                cam != null ? cam.transform : null,
+                hit.collider,
+                hit.point);
+            if (knockedOver)
+            {
+                return true;
+            }
         }
 
         return false;
@@ -300,6 +327,30 @@ public class PhysicsGrab : MonoBehaviour
         return true;
     }
 
+    public bool TrySnapThrownFishToMicrowave(Rigidbody fishBody, float snapDistance)
+    {
+        if (fishBody == null || !IsFishObject(fishBody) || IsLockedInMicrowave(fishBody))
+        {
+            return false;
+        }
+
+        RageInteractionPropSignal closestMicrowave = FindClosestMicrowaveSignal(fishBody.position);
+        if (closestMicrowave == null)
+        {
+            return false;
+        }
+
+        float maxDistanceSq = snapDistance * snapDistance;
+        float distanceSq = (closestMicrowave.transform.position - fishBody.position).sqrMagnitude;
+        if (distanceSq > maxDistanceSq)
+        {
+            return false;
+        }
+
+        LockFishIntoMicrowave(fishBody, closestMicrowave);
+        return true;
+    }
+
     RageInteractionPropSignal FindClosestMicrowaveSignal(Vector3 fromPosition)
     {
         RageInteractionPropSignal[] signals =
@@ -310,7 +361,12 @@ public class PhysicsGrab : MonoBehaviour
         for (int i = 0; i < signals.Length; i++)
         {
             RageInteractionPropSignal signal = signals[i];
-            if (signal == null || signal.SignalEventType != RageSignalEventType.MicrowaveFish)
+            if (signal == null)
+            {
+                continue;
+            }
+
+            if (signal.SignalEventType != RageSignalEventType.MicrowaveFish)
             {
                 continue;
             }
@@ -329,13 +385,35 @@ public class PhysicsGrab : MonoBehaviour
     void LockFishIntoMicrowave(Rigidbody fishBody, RageInteractionPropSignal microwaveSignal)
     {
         fishBody.transform.SetParent(microwaveSignal.transform, true);
-        fishBody.transform.localPosition = fishSnapLocalPosition;
-        fishBody.transform.localRotation = Quaternion.Euler(fishSnapLocalEulerAngles);
+        Vector3 targetLocalPosition = fishSnapLocalPosition;
+        Quaternion targetLocalRotation = Quaternion.Euler(fishSnapLocalEulerAngles);
 
         fishBody.linearVelocity = Vector3.zero;
         fishBody.angularVelocity = Vector3.zero;
         fishBody.useGravity = false;
         fishBody.isKinematic = true;
+
+        bool playedInsertAnimation = false;
+        MicrowaveFishJuiceAnimator fishJuiceAnimator = fishBody.GetComponent<MicrowaveFishJuiceAnimator>();
+        if (fishJuiceAnimator == null)
+        {
+            fishJuiceAnimator = fishBody.gameObject.AddComponent<MicrowaveFishJuiceAnimator>();
+        }
+
+        if (fishJuiceAnimator != null)
+        {
+            Transform cameraTransform = cam != null ? cam.transform : null;
+            playedInsertAnimation = fishJuiceAnimator.TryPlayInsert(
+                targetLocalPosition,
+                targetLocalRotation,
+                cameraTransform);
+        }
+
+        if (!playedInsertAnimation)
+        {
+            fishBody.transform.localPosition = targetLocalPosition;
+            fishBody.transform.localRotation = targetLocalRotation;
+        }
 
         MicrowaveLockedItem lockState = fishBody.GetComponent<MicrowaveLockedItem>();
         if (lockState == null)
@@ -352,6 +430,12 @@ public class PhysicsGrab : MonoBehaviour
         if (rb == null)
         {
             return false;
+        }
+
+        RageInteractionPropSignal fishSignal = rb.GetComponentInParent<RageInteractionPropSignal>();
+        if (fishSignal != null && fishSignal.SignalEventType == RageSignalEventType.MicrowaveFishItem)
+        {
+            return true;
         }
 
         return rb.name.ToLowerInvariant().Contains(fishNameToken.ToLowerInvariant());
@@ -480,10 +564,24 @@ public class PhysicsGrab : MonoBehaviour
 
     void Throw()
     {
+        Rigidbody objectToThrow = heldObject;
         heldObject.useGravity = true;
         heldObject.isKinematic = false;
         heldObject.AddForce(cam.transform.forward * throwForce, ForceMode.Impulse);
         heldObject = null;
+
+        if (!allowThrownFishMicrowaveSnap || objectToThrow == null || !IsFishObject(objectToThrow))
+        {
+            return;
+        }
+
+        FishMicrowaveProjectile snapHelper = objectToThrow.GetComponent<FishMicrowaveProjectile>();
+        if (snapHelper == null)
+        {
+            snapHelper = objectToThrow.gameObject.AddComponent<FishMicrowaveProjectile>();
+        }
+
+        snapHelper.Arm(this, objectToThrow, thrownFishSnapDistance, thrownFishSnapMinSpeed, thrownFishSnapLifetime);
     }
 
     void OnGUI()
@@ -553,11 +651,19 @@ public class PhysicsGrab : MonoBehaviour
             }
             else
             {
-                // Other signals are not currently handled by prototype input.
+                if (signal.SignalEventType == RageSignalEventType.KnockOver &&
+                    signal.CanPerformKnockOver(hit.collider))
+                {
+                    return interactReticleColor;
+                }
             }
         }
 
-        Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
+        Rigidbody rb = hit.collider.attachedRigidbody;
+        if (rb == null)
+        {
+            rb = hit.collider.GetComponentInParent<Rigidbody>();
+        }
         if (rb != null && !IsLockedInMicrowave(rb) && !IsLockedInCoffeeSpill(rb))
         {
             return interactReticleColor;

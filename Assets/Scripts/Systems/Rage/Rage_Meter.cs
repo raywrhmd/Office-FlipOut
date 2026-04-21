@@ -92,9 +92,12 @@ public class Rage_Meter : MonoBehaviour
     private int currentRage;
     private bool isFlippedOut;
     private bool isFlipOutSequenceRunning;
+    private AudioListener temporarilyDisabledSourceAudioListener;
 
     private void Awake()
     {
+        npcSignalId = NormalizeLegacyNpcSignalId(npcSignalId);
+
         if (ensureNpcFacesCamera && GetComponent<NpcCameraBillboard>() == null)
         {
             gameObject.AddComponent<NpcCameraBillboard>();
@@ -103,6 +106,25 @@ public class Rage_Meter : MonoBehaviour
         EnsureRageFaceVisual();
         RefreshNpcBodySprite();
         RefreshRageFaceSprite();
+    }
+
+    /// <summary>
+    /// Matches EmployeeProfileData ids (npc_1) if older scenes used npc1 / npc2 without underscores.
+    /// </summary>
+    private static string NormalizeLegacyNpcSignalId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return id;
+        }
+
+        switch (id.Trim())
+        {
+            case "npc1": return "npc_1";
+            case "npc2": return "npc_2";
+            case "npc3": return "npc_3";
+            default: return id;
+        }
     }
 
     private void OnEnable()
@@ -431,6 +453,12 @@ public class Rage_Meter : MonoBehaviour
             mainCamera.enabled = true;
         }
 
+        if (temporarilyDisabledSourceAudioListener != null)
+        {
+            temporarilyDisabledSourceAudioListener.enabled = true;
+            temporarilyDisabledSourceAudioListener = null;
+        }
+
         if (cinematicCamera != null)
         {
             Destroy(cinematicCamera.gameObject);
@@ -462,6 +490,8 @@ public class Rage_Meter : MonoBehaviour
         AudioListener sourceListener = sourceCamera.GetComponent<AudioListener>();
         if (sourceListener != null && sourceListener.enabled)
         {
+            temporarilyDisabledSourceAudioListener = sourceListener;
+            sourceListener.enabled = false;
             AudioListener newListener = cameraObject.AddComponent<AudioListener>();
             newListener.enabled = true;
         }
@@ -591,33 +621,28 @@ public class Rage_Meter : MonoBehaviour
 
         if (rageFaceAnchor == null)
         {
-            GameObject anchor = new GameObject("RageFaceAnchor");
-            anchor.transform.SetParent(transform);
-            anchor.transform.localPosition = Vector3.up * rageFaceVerticalOffset;
-            anchor.transform.localRotation = Quaternion.identity;
-            rageFaceAnchor = anchor.transform;
+            return;
         }
 
         if (rageFaceRenderer == null)
         {
+            rageFaceRenderer = rageFaceAnchor.GetComponent<SpriteRenderer>();
+            if (rageFaceRenderer != null)
+            {
+                return;
+            }
+
             Transform existing = rageFaceAnchor.Find("RageFaceVisual");
             if (existing != null)
             {
                 rageFaceRenderer = existing.GetComponent<SpriteRenderer>();
             }
-
-            if (rageFaceRenderer == null)
-            {
-                GameObject visual = new GameObject("RageFaceVisual");
-                visual.transform.SetParent(rageFaceAnchor);
-                visual.transform.localPosition = Vector3.zero;
-                visual.transform.localRotation = Quaternion.identity;
-                rageFaceRenderer = visual.AddComponent<SpriteRenderer>();
-            }
         }
 
-        rageFaceAnchor.localPosition = Vector3.up * rageFaceVerticalOffset;
-        rageFaceRenderer.transform.localScale = rageFaceScale;
+        if (rageFaceRenderer != null)
+        {
+            rageFaceRenderer.transform.localScale = rageFaceScale;
+        }
     }
 
     private void RefreshRageFaceSprite()
@@ -660,6 +685,24 @@ public class Rage_Meter : MonoBehaviour
 
     private Sprite GetCurrentRageFaceSprite()
     {
+        bool hasReachedFlipThreshold = currentRage >= requiredSignals;
+
+        // As soon as threshold is reached, force full-rage face even before flip-out state toggles.
+        // This avoids a one-frame fallback to calm when intermediate rage face sprites are not assigned.
+        if (hasReachedFlipThreshold)
+        {
+            if (rageFaceFlipOutSprite != null)
+            {
+                return rageFaceFlipOutSprite;
+            }
+
+            Sprite thresholdFace = GetRageFaceSpriteForNormalizedProgress(1f);
+            if (thresholdFace != null)
+            {
+                return thresholdFace;
+            }
+        }
+
         if (isFlippedOut)
         {
             if (rageFaceFlipOutSprite != null)
@@ -691,7 +734,9 @@ public class Rage_Meter : MonoBehaviour
     private Sprite GetRageFaceSpriteForNormalizedProgress(float normalizedProgress)
     {
         float clamped = Mathf.Clamp01(normalizedProgress);
-        int stage = Mathf.Clamp(Mathf.CeilToInt(clamped * 4f), 1, 4);
+        // Use floor-based bucketing so early rage values start at stage 1
+        // (ceil would jump to stage 2 too quickly, e.g. 1/3 rage).
+        int stage = Mathf.Clamp(Mathf.FloorToInt(clamped * 4f), 1, 4);
 
         switch (stage)
         {
@@ -713,6 +758,7 @@ public class Rage_Meter : MonoBehaviour
             requiredSignals = 1;
         }
 
+        rageFaceVerticalOffset = Mathf.Max(0f, rageFaceVerticalOffset);
         currentRage = Mathf.Clamp(currentRage, 0, requiredSignals);
         AutoAssignVisualReferences();
         EnsureRageFaceVisual();

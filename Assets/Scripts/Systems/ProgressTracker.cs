@@ -7,6 +7,8 @@ namespace OfficeFlipOut.Systems
 {
     public class ProgressTracker : MonoBehaviour
     {
+        private const string BrutusNpcId = "npc_2";
+
         [Serializable]
         public class EmployeeProgressSnapshot
         {
@@ -20,14 +22,35 @@ namespace OfficeFlipOut.Systems
             public bool tookStapler;
             public Sprite rageFaceSprite;
 
+            public int TotalTasksCount
+            {
+                get
+                {
+                    if (npcId == BrutusNpcId)
+                    {
+                        return Mathf.Clamp(requiredSignals, 1, 2);
+                    }
+
+                    return Mathf.Clamp(requiredSignals, 1, 3);
+                }
+            }
+
             public int CompletedTasksCount
             {
                 get
                 {
                     int completed = 0;
-                    if (spilledDrink) completed++;
-                    if (microwavedFish) completed++;
-                    if (tookStapler) completed++;
+
+                    if (npcId == BrutusNpcId)
+                    {
+                        if (TotalTasksCount >= 1 && microwavedFish) completed++;
+                        if (TotalTasksCount >= 2 && tookStapler) completed++;
+                        return completed;
+                    }
+
+                    if (TotalTasksCount >= 1 && spilledDrink) completed++;
+                    if (TotalTasksCount >= 2 && microwavedFish) completed++;
+                    if (TotalTasksCount >= 3 && tookStapler) completed++;
                     return completed;
                 }
             }
@@ -141,10 +164,11 @@ namespace OfficeFlipOut.Systems
                 return 0f;
             }
 
-            int totalTasks = snapshots.Count * 3;
+            int totalTasks = 0;
             int complete = 0;
             for (int i = 0; i < snapshots.Count; i++)
             {
+                totalTasks += snapshots[i].TotalTasksCount;
                 complete += snapshots[i].CompletedTasksCount;
             }
 
@@ -196,22 +220,37 @@ namespace OfficeFlipOut.Systems
                 return "All known coworkers are fully destabilized.";
             }
 
-            if (!target.spilledDrink)
+            if (target.npcId == BrutusNpcId)
+            {
+                if (target.TotalTasksCount >= 1 && !target.microwavedFish)
+                {
+                    nextSuggestedAction = "Bring birthday cake near him.";
+                    return "Raise " + target.displayName + " rage with birthday cake.";
+                }
+
+                if (target.TotalTasksCount >= 2 && !target.tookStapler)
+                {
+                    nextSuggestedAction = "Knock over his filing cabinet.";
+                    return "Raise " + target.displayName + " rage by ruining his filing cabinet order.";
+                }
+            }
+
+            if (target.TotalTasksCount >= 1 && !target.spilledDrink)
             {
                 nextSuggestedAction = "Spill a drink near their desk area.";
                 return "Raise " + target.displayName + " rage by spilling a drink.";
             }
 
-            if (!target.microwavedFish)
+            if (target.TotalTasksCount >= 2 && !target.microwavedFish)
             {
                 nextSuggestedAction = "Microwave fish while they are nearby.";
                 return "Raise " + target.displayName + " rage with microwave fish.";
             }
 
-            if (!target.tookStapler)
+            if (target.TotalTasksCount >= 3 && !target.tookStapler)
             {
-                nextSuggestedAction = "Steal the stapler from their desk.";
-                return "Raise " + target.displayName + " rage by taking the stapler.";
+                nextSuggestedAction = "Steal one of their desk objects.";
+                return "Raise " + target.displayName + " rage by stealing an object.";
             }
 
             nextSuggestedAction = "Push their rage to full with remaining interactions.";
@@ -224,7 +263,8 @@ namespace OfficeFlipOut.Systems
             {
                 for (int i = 0; i < snapshots.Count; i++)
                 {
-                    if (snapshots[i].npcId == focusNpcId && snapshots[i].CompletedTasksCount < 3)
+                    if (snapshots[i].npcId == focusNpcId &&
+                        snapshots[i].CompletedTasksCount < snapshots[i].TotalTasksCount)
                     {
                         return snapshots[i];
                     }
@@ -233,7 +273,7 @@ namespace OfficeFlipOut.Systems
 
             for (int i = 0; i < snapshots.Count; i++)
             {
-                if (snapshots[i].CompletedTasksCount < 3)
+                if (snapshots[i].CompletedTasksCount < snapshots[i].TotalTasksCount)
                 {
                     return snapshots[i];
                 }
@@ -271,8 +311,16 @@ namespace OfficeFlipOut.Systems
                 snapshot.requiredSignals = meter.RequiredSignals;
                 snapshot.isFlippedOut = meter.IsFlippedOut;
                 snapshot.spilledDrink = meter.HasReceivedSignal(RageSignalIds.SpillDrinkOnDesk);
-                snapshot.microwavedFish = meter.HasReceivedSignal(RageSignalIds.MicrowaveFish);
-                snapshot.tookStapler = meter.HasReceivedSignal(RageSignalIds.TakeStaplerFromDesk);
+                if (snapshot.npcId == BrutusNpcId)
+                {
+                    snapshot.microwavedFish = meter.HasReceivedSignal(RageSignalIds.BringObjectNear);
+                    snapshot.tookStapler = meter.HasReceivedSignal(RageSignalIds.KnockOver);
+                }
+                else
+                {
+                    snapshot.microwavedFish = meter.HasReceivedSignal(RageSignalIds.MicrowaveFish);
+                    snapshot.tookStapler = meter.HasReceivedSignal(RageSignalIds.StealObject);
+                }
                 snapshot.rageFaceSprite = meter.CurrentRageFaceSprite;
                 snapshots.Add(snapshot);
             }

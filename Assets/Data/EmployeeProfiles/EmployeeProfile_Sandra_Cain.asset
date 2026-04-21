@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: EmployeeProfile_Sandra_Cain
   m_EditorClassIdentifier: Assembly-CSharp::OfficeFlipOut.Data.EmployeeProfileData
   npcId: npc_1
-  displayName: Sandra Cain
+  displayName: Sandra
   role: Coworker
   colorIdentity: Purple
-  portrait: {fileID: 0}
+  portrait: {fileID: 703405830, guid: b1193fe410d974dd7b206ddaad92556f, type: 3}
   personalitySummary: Chic and style-first. Adds puzzle depth through timing and
     social space awareness.
   sabotageHint: Use fish smell when she crosses shared spaces. Hit her routine windows.

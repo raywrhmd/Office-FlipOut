@@ -8,6 +8,9 @@ public class RageFlipOutProp : MonoBehaviour
     [Header("Listening")]
     [SerializeField, Min(0f)] private float reactionCooldown = 0.1f;
 
+    [Header("Physics Safety")]
+    [SerializeField] private bool forceDynamicPhysicsOnEnable = true;
+
     [Header("Funny Physics")]
     [SerializeField] private Vector2 extraUpImpulseRange = new Vector2(0.5f, 2f);
     [SerializeField] private Vector2 torqueMultiplierRange = new Vector2(0.7f, 1.6f);
@@ -32,10 +35,13 @@ public class RageFlipOutProp : MonoBehaviour
         {
             targetRigidbody = GetComponent<Rigidbody>();
         }
+
+        EnsureDynamicPhysicsState();
     }
 
     private void OnEnable()
     {
+        EnsureDynamicPhysicsState();
         RageSignalHub.FlipOutBlastRaised += HandleFlipOutBlast;
     }
 
@@ -139,6 +145,18 @@ public class RageFlipOutProp : MonoBehaviour
         float torqueMultiplier = Random.Range(torqueMultiplierRange.x, torqueMultiplierRange.y);
         Vector3 randomTorque = Random.onUnitSphere * blastData.RandomTorque * torqueMultiplier;
         targetRigidbody.AddTorque(randomTorque, ForceMode.Impulse);
+    }
+
+    private void EnsureDynamicPhysicsState()
+    {
+        if (!forceDynamicPhysicsOnEnable || targetRigidbody == null)
+        {
+            return;
+        }
+
+        targetRigidbody.useGravity = true;
+        targetRigidbody.isKinematic = false;
+        targetRigidbody.WakeUp();
     }
 
     [ContextMenu("Debug/Test Prop Flip Out")]

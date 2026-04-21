@@ -13,20 +13,20 @@ MonoBehaviour:
   m_Name: EmployeeProfile_Brutus_Stragenoff
   m_EditorClassIdentifier: Assembly-CSharp::OfficeFlipOut.Data.EmployeeProfileData
   npcId: npc_2
-  displayName: Brutus Stragenoff
+  displayName: Brutus
   role: Coworker
   colorIdentity: Red
-  portrait: {fileID: 0}
+  portrait: {fileID: -166597567, guid: 6e35706fa1cc941c3961f395921ffadd, type: 3}
   personalitySummary: Temperamental and easy to provoke. Great first target to learn
     sabotage flow.
-  sabotageHint: Stack quick annoyances near his desk to trigger an early FLIP OUT.
+  sabotageHint: Bring birthday cake near him and ruin his perfectly organized filing cabinet.
   likes:
   - Quiet workspace
-  - Personal desk order
+  - Perfectly organized filing cabinet
   dislikes:
   - Spilled drinks
-  - Microwave fish smell
-  - Stapler theft
+  - Birthday cake
+  - Filing cabinet disorder
   difficultyTier: 0
   startsLocked: 0
   requiresAllCoworkersFlipped: 0

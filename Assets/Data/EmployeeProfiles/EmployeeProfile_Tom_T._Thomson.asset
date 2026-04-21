@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: EmployeeProfile_Tom_T._Thomson
   m_EditorClassIdentifier: Assembly-CSharp::OfficeFlipOut.Data.EmployeeProfileData
   npcId: npc_3
-  displayName: Tom T. Thomson
+  displayName: Tommy
   role: Coworker
   colorIdentity: Green/Blue
-  portrait: {fileID: 0}
+  portrait: {fileID: 2082917662, guid: 95d68c778eaa14994ac3c2537ae485c0, type: 3}
   personalitySummary: Chill and hard to rattle. Requires layered sabotage and better
     setup.
   sabotageHint: Prime the space first, then chain multiple disliked interactions
@@ -29,7 +29,7 @@ MonoBehaviour:
   - Cigarette smoke
   - Persistent pranks
   - Desk tampering
-  difficultyTier: 2
+  difficultyTier: 1
   startsLocked: 0
   requiresAllCoworkersFlipped: 0
   scheduleBlocks:
