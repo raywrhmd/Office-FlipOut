@@ -8,11 +8,16 @@ namespace OfficeFlipOut.Systems
     {
         public static bool IsPaused { get; private set; }
         public static bool IsCinematicInputLocked { get; private set; }
+        public static bool IsWin { get; private set; }
 
-        public static bool ShouldBlockGameplayInput => IsPaused || IsCinematicInputLocked;
+        public static bool ShouldBlockGameplayInput => IsPaused || IsWin || IsCinematicInputLocked;
 
         public static void SetPaused(bool paused)
         {
+            if (IsWin)
+            {
+                paused = false;
+            }
             if (IsPaused == paused)
             {
                 return;
@@ -22,16 +27,36 @@ namespace OfficeFlipOut.Systems
             Time.timeScale = IsPaused ? 0f : 1f;
         }
 
-        public static void ResetSession()
+        public static void SetWin(bool win)
         {
-            IsPaused = false;
-            IsCinematicInputLocked = false;
-            Time.timeScale = 1f;
+            if (IsWin == win)
+            {
+                return;
+            }
+
+            IsWin = win;
+            if (IsWin)
+            {
+                IsPaused = false;
+                Time.timeScale = 0f;
+            }
+            else if (!IsPaused)
+            {
+                Time.timeScale = 1f;
+            }
         }
 
         public static void SetCinematicInputLocked(bool locked)
         {
             IsCinematicInputLocked = locked;
+        }
+
+        public static void ResetSession()
+        {
+            IsPaused = false;
+            IsWin = false;
+            IsCinematicInputLocked = false;
+            Time.timeScale = 1f;
         }
     }
 
@@ -53,15 +78,24 @@ namespace OfficeFlipOut.Systems
         [Header("Input")]
         [SerializeField] private KeyCode pauseKey = KeyCode.P;
 
+        [Header("Win Condition")]
+        [SerializeField] private bool autoWinWhenAllCoworkersFlipped = true;
+
         [Header("Overlay")]
         [SerializeField] private GUISkin guiSkin;
 
+        private ProgressTracker progressTracker;
         private Rect overlayRect = new Rect(0f, 0f, 580f, 320f);
         private GUIStyle pauseTitleStyle;
         private GUIStyle pauseBodyStyle;
 
         private void Awake()
         {
+            progressTracker = FindFirst<ProgressTracker>();
+            if (progressTracker == null)
+            {
+                progressTracker = new GameObject("ProgressTracker").AddComponent<ProgressTracker>();
+            }
             GameRuntimeState.ResetSession();
         }
 
@@ -77,10 +111,45 @@ namespace OfficeFlipOut.Systems
                 return;
             }
 
-            if (Input.GetKeyDown(pauseKey) && !ClipboardUIState.IsOpen)
+            if (Input.GetKeyDown(pauseKey) && !GameRuntimeState.IsWin && !ClipboardUIState.IsOpen)
             {
                 GameRuntimeState.SetPaused(!GameRuntimeState.IsPaused);
             }
+
+            if (autoWinWhenAllCoworkersFlipped && !GameRuntimeState.IsWin && AreAllCoworkersFlipped())
+            {
+                TriggerWin();
+            }
+        }
+
+        private bool AreAllCoworkersFlipped()
+        {
+            if (progressTracker == null)
+            {
+                return false;
+            }
+
+            var snapshots = progressTracker.GetSnapshots();
+            if (snapshots == null || snapshots.Count == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                if (!snapshots[i].isFlippedOut)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public void TriggerWin()
+        {
+            ClipboardUIState.SetOpen(false);
+            GameRuntimeState.SetWin(true);
         }
 
         private void RestartCurrentScene()
@@ -102,7 +171,7 @@ namespace OfficeFlipOut.Systems
 
         private void OnGUI()
         {
-            if (!GameRuntimeState.IsPaused)
+            if (!GameRuntimeState.IsPaused && !GameRuntimeState.IsWin)
             {
                 return;
             }
@@ -125,19 +194,24 @@ namespace OfficeFlipOut.Systems
             GUILayout.BeginArea(overlayRect, GUI.skin.window);
             GUILayout.Space(14f);
 
-            const string title = "Paused";
-            const string subtitle = "Take a breather and pick your next move.";
+            string title = GameRuntimeState.IsWin ? "You Made Everyone Flip Out" : "Paused";
+            string subtitle = GameRuntimeState.IsWin
+                ? "The whole office lost it on your watch. Congratulations on your job security."
+                : "Take a breather and pick your next move.";
 
             GUILayout.Label(title, pauseTitleStyle);
             GUILayout.Space(10f);
             GUILayout.Label(subtitle, pauseBodyStyle);
             GUILayout.Space(22f);
 
-            if (GUILayout.Button("Resume", GUILayout.Height(42f)))
+            if (!GameRuntimeState.IsWin)
             {
-                GameRuntimeState.SetPaused(false);
+                if (GUILayout.Button("Resume", GUILayout.Height(42f)))
+                {
+                    GameRuntimeState.SetPaused(false);
+                }
+                GUILayout.Space(10f);
             }
-            GUILayout.Space(10f);
 
             if (GUILayout.Button("Restart Level", GUILayout.Height(42f)))
             {

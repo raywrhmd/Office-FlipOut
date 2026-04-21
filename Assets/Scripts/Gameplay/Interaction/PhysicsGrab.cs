@@ -225,24 +225,17 @@ public class PhysicsGrab : MonoBehaviour
         {
             coffeeBody.transform.SetParent(spillSignal.transform, true);
         }
-<<<<<<< Updated upstream:Assets/Scripts/GrabSystem.cs
-        coffeeBody.transform.localPosition = coffeeSpillSnapLocalPosition;
-        coffeeBody.transform.localRotation = Quaternion.Euler(coffeeSpillSnapLocalEulerAngles);
-=======
 
         Vector3 spillTargetLocalPosition = coffeeSpillPositionIsOffset
             ? coffeeBody.transform.localPosition + coffeeSpillSnapLocalPosition
             : coffeeSpillSnapLocalPosition;
         Quaternion targetLocalRotation = Quaternion.Euler(coffeeSpillSnapLocalEulerAngles);
->>>>>>> Stashed changes:Assets/Scripts/Gameplay/Interaction/PhysicsGrab.cs
 
         coffeeBody.linearVelocity = Vector3.zero;
         coffeeBody.angularVelocity = Vector3.zero;
         coffeeBody.useGravity = false;
         coffeeBody.isKinematic = true;
 
-<<<<<<< Updated upstream:Assets/Scripts/GrabSystem.cs
-=======
         bool playedJuiceAnimation = false;
         CoffeeSpillJuiceAnimator spillJuiceAnimator = coffeeBody.GetComponent<CoffeeSpillJuiceAnimator>();
         if (spillJuiceAnimator == null)
@@ -264,8 +257,6 @@ public class PhysicsGrab : MonoBehaviour
             coffeeBody.transform.localPosition = spillTargetLocalPosition;
             coffeeBody.transform.localRotation = targetLocalRotation;
         }
-
->>>>>>> Stashed changes:Assets/Scripts/Gameplay/Interaction/PhysicsGrab.cs
         if (disableCoffeeSpillRageOnSnap)
         {
             CoffeeSpillRage spillRage = coffeeBody.GetComponent<CoffeeSpillRage>();

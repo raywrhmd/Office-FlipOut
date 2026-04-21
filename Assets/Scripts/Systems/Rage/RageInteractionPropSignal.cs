@@ -5,7 +5,8 @@ public enum RageSignalEventType
 {
     SpillDrinkOnDesk = 0,
     MicrowaveFish = 1,
-    TakeStaplerFromDesk = 2
+    TakeStaplerFromDesk = 2,
+    NoSignal = 3
 }
 
 public static class RageSignalIds
@@ -19,6 +20,7 @@ public static class RageSignalIds
 public class RageInteractionPropSignal : MonoBehaviour
 {
     [Header("Signal")]
+    [Tooltip("Set to NoSignal to keep hover hints without sending any rage signal.")]
     [SerializeField] private RageSignalEventType signalEventType = RageSignalEventType.SpillDrinkOnDesk;
 
     [Header("Target")]
@@ -48,20 +50,40 @@ public class RageInteractionPropSignal : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool logSignalSendToConsole = true;
 
+    [Header("Hover Hint Icon")]
+    [SerializeField] private bool showHoverHintIcon = true;
+    [SerializeField, Min(0f)] private float hoverHintVerticalOffset = 0.8f;
+    [SerializeField, Min(0.01f)] private float hoverHintScale = 0.2f;
+    [Tooltip("PNG sprite used for the floating hint icon.")]
+    [SerializeField] private Sprite hoverHintSprite;
+    [Tooltip("Optional: if set, icon follows this anchor instead of using vertical offset from this prop.")]
+    [SerializeField] private Transform hoverHintAnchor;
+    [SerializeField] private bool hideHintWhenLocked = true;
+
     public RageSignalEventType SignalEventType => signalEventType;
 
     private bool hasSent;
     private bool hasTriggeredDistanceSignal;
     private float lastSendTime = -999f;
     private Vector3 originPosition;
+    private Camera cachedMainCamera;
+    private Transform hoverHintTransform;
+    private SpriteRenderer hoverHintRenderer;
+    private CoffeeSpillLockedItem coffeeLock;
+    private MicrowaveLockedItem microwaveLock;
+    private bool loggedMissingSpriteWarning;
 
     private void Awake()
     {
         originPosition = transform.position;
+        CacheLockReferences();
+        CacheMainCamera();
     }
 
     private void Update()
     {
+        UpdateHoverHintVisibility();
+
         if (!sendOnDistanceFromOrigin)
         {
             return;
@@ -86,6 +108,11 @@ public class RageInteractionPropSignal : MonoBehaviour
 
         hasTriggeredDistanceSignal = true;
         TrySendSignal("distance-from-origin threshold exceeded");
+    }
+
+    private void LateUpdate()
+    {
+        UpdateHoverHintBillboard();
     }
 
     public void Interact()
@@ -226,8 +253,10 @@ public class RageInteractionPropSignal : MonoBehaviour
                 return RageSignalIds.MicrowaveFish;
             case RageSignalEventType.TakeStaplerFromDesk:
                 return RageSignalIds.TakeStaplerFromDesk;
+            case RageSignalEventType.NoSignal:
+                return string.Empty;
             default:
-                return RageSignalIds.SpillDrinkOnDesk;
+                return string.Empty;
         }
     }
 
@@ -246,5 +275,172 @@ public class RageInteractionPropSignal : MonoBehaviour
     {
         originPosition = transform.position;
         hasTriggeredDistanceSignal = false;
+    }
+
+    private void CacheLockReferences()
+    {
+        coffeeLock = GetComponent<CoffeeSpillLockedItem>();
+        if (coffeeLock == null)
+        {
+            coffeeLock = GetComponentInParent<CoffeeSpillLockedItem>();
+        }
+
+        if (coffeeLock == null)
+        {
+            coffeeLock = GetComponentInChildren<CoffeeSpillLockedItem>();
+        }
+
+        microwaveLock = GetComponent<MicrowaveLockedItem>();
+        if (microwaveLock == null)
+        {
+            microwaveLock = GetComponentInParent<MicrowaveLockedItem>();
+        }
+
+        if (microwaveLock == null)
+        {
+            microwaveLock = GetComponentInChildren<MicrowaveLockedItem>();
+        }
+    }
+
+    private void CacheMainCamera()
+    {
+        if (cachedMainCamera == null)
+        {
+            cachedMainCamera = Camera.main;
+        }
+    }
+
+    private Vector3 GetHintAnchorPosition()
+    {
+        if (hoverHintAnchor != null)
+        {
+            return hoverHintAnchor.position;
+        }
+
+        return transform.position + Vector3.up * hoverHintVerticalOffset;
+    }
+
+    private void EnsureHoverHintObject()
+    {
+        if (hoverHintTransform != null)
+        {
+            return;
+        }
+
+        GameObject iconObject = new GameObject("RageHintIcon");
+        iconObject.transform.SetParent(transform, false);
+        iconObject.transform.localScale = Vector3.one * hoverHintScale;
+
+        hoverHintRenderer = iconObject.AddComponent<SpriteRenderer>();
+        hoverHintRenderer.sprite = hoverHintSprite;
+        hoverHintRenderer.color = Color.white;
+        hoverHintRenderer.sortingOrder = 2000;
+
+        hoverHintTransform = iconObject.transform;
+        iconObject.SetActive(false);
+    }
+
+    private bool IsInteractionLocked()
+    {
+        if (!hideHintWhenLocked)
+        {
+            return false;
+        }
+
+        bool coffeeLocked = coffeeLock != null && coffeeLock.IsLocked;
+        bool microwaveLocked = microwaveLock != null && microwaveLock.IsLocked;
+        return coffeeLocked || microwaveLocked;
+    }
+
+    private void SetHoverHintActive(bool isVisible)
+    {
+        if (hoverHintTransform == null)
+        {
+            if (!isVisible)
+            {
+                return;
+            }
+
+            EnsureHoverHintObject();
+        }
+
+        if (hoverHintTransform.gameObject.activeSelf != isVisible)
+        {
+            hoverHintTransform.gameObject.SetActive(isVisible);
+        }
+    }
+
+    private void UpdateHoverHintVisibility()
+    {
+        if (!showHoverHintIcon)
+        {
+            SetHoverHintActive(false);
+            return;
+        }
+
+        if (sendOnlyOnce && hasSent)
+        {
+            SetHoverHintActive(false);
+            return;
+        }
+
+        if (IsInteractionLocked())
+        {
+            SetHoverHintActive(false);
+            return;
+        }
+
+        if (hoverHintSprite == null)
+        {
+            SetHoverHintActive(false);
+            if (!loggedMissingSpriteWarning)
+            {
+                Debug.LogWarning(
+                    "[RageInteractionPropSignal] " + name +
+                    " has hover hint enabled but no Hover Hint Sprite assigned.",
+                    this);
+                loggedMissingSpriteWarning = true;
+            }
+            return;
+        }
+
+        loggedMissingSpriteWarning = false;
+
+        Vector3 anchorPosition = GetHintAnchorPosition();
+        SetHoverHintActive(true);
+        if (hoverHintTransform == null)
+        {
+            return;
+        }
+
+        hoverHintTransform.localScale = Vector3.one * hoverHintScale;
+        hoverHintTransform.position = anchorPosition;
+
+        if (hoverHintRenderer != null && hoverHintRenderer.sprite != hoverHintSprite)
+        {
+            hoverHintRenderer.sprite = hoverHintSprite;
+        }
+    }
+
+    private void UpdateHoverHintBillboard()
+    {
+        if (hoverHintTransform == null || !hoverHintTransform.gameObject.activeSelf)
+        {
+            return;
+        }
+
+        CacheMainCamera();
+        if (cachedMainCamera == null)
+        {
+            return;
+        }
+
+        Vector3 lookDirection = hoverHintTransform.position - cachedMainCamera.transform.position;
+        if (lookDirection.sqrMagnitude < 0.0001f)
+        {
+            return;
+        }
+
+        hoverHintTransform.rotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
     }
 }

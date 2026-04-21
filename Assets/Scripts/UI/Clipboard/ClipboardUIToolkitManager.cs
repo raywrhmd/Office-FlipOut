@@ -36,6 +36,7 @@ namespace OfficeFlipOut.UI
         private VisualElement shell;
         private VisualElement dimmer;
         private VisualElement board;
+        private VisualElement clipboardPaper;
 
         // Tabs (3: Directory, Progress, Map)
         private VisualElement tabDirectoryRoot, tabProgressRoot, tabMapRoot;
@@ -48,7 +49,9 @@ namespace OfficeFlipOut.UI
         private bool dossierOpen;
 
         // Footer (P3)
+        private Button footerBackDossier;
         private Button footerPrevious, footerNext, footerClose;
+        private VisualElement footerCounterWrap;
         private Label pageCounterLabel;
         private VisualElement footerRow;
 
@@ -226,6 +229,7 @@ namespace OfficeFlipOut.UI
             shell = root.Q<VisualElement>("ClipboardShell");
             dimmer = root.Q<VisualElement>("Dimmer");
             board = root.Q<VisualElement>("Board");
+            clipboardPaper = root.Q<VisualElement>("ClipboardPaper");
 
             tabDirectoryRoot = root.Q<VisualElement>("TabDirectoryRoot");
             tabProgressRoot = root.Q<VisualElement>("TabProgressRoot");
@@ -239,9 +243,11 @@ namespace OfficeFlipOut.UI
             dossierView = root.Q<VisualElement>("DossierView");
 
             footerRow = root.Q<VisualElement>("FooterRow");
+            footerBackDossier = root.Q<Button>("FooterBackDossier");
             footerPrevious = root.Q<Button>("FooterPrevious");
             footerNext = root.Q<Button>("FooterNext");
             footerClose = root.Q<Button>("FooterClose");
+            footerCounterWrap = root.Q<VisualElement>("FooterCounterWrap");
             pageCounterLabel = root.Q<Label>("PageCounter");
 
             quitPopup = root.Q<VisualElement>("QuitPopup");
@@ -325,6 +331,8 @@ namespace OfficeFlipOut.UI
             root.Q<Button>("TabProgress").clicked += () => { CloseDossier(); ClipboardUIState.SetTab(ClipboardTab.Progress); };
             root.Q<Button>("TabMap").clicked += () => { CloseDossier(); ClipboardUIState.SetTab(ClipboardTab.Map); };
 
+            if (footerBackDossier != null)
+                footerBackDossier.clicked += CloseDossier;
             footerPrevious.clicked += HandleFooterPrevious;
             footerNext.clicked += HandleFooterNext;
             footerClose.clicked += () => ClipboardUIState.SetOpen(false);
@@ -335,8 +343,6 @@ namespace OfficeFlipOut.UI
                 if (cards[i].openButton != null)
                     cards[i].openButton.clicked += () => HandleOpenProfile(slot);
             }
-
-            root.Q<Button>("DetailBackBtn").clicked += CloseDossier;
 
             // Quit popup (P4)
             root.Q<Button>("QuitCornerBtn").clicked += () => SetVisible(quitPopup, true);
@@ -397,6 +403,17 @@ namespace OfficeFlipOut.UI
                 }
                 if (tab == ClipboardTab.Progress) RefreshProgress();
             }
+
+            UpdateDossierPaperDecor(isOpen);
+        }
+
+        private void UpdateDossierPaperDecor(bool clipboardOpen)
+        {
+            if (clipboardPaper == null) return;
+            bool hideBoardClip = clipboardOpen
+                && ClipboardUIState.ActiveTab == ClipboardTab.Directory
+                && dossierOpen;
+            clipboardPaper.EnableInClassList("dossier-detail-open", hideBoardClip);
         }
 
         private void SetPanelVisible(VisualElement panel, bool visible)
@@ -435,7 +452,7 @@ namespace OfficeFlipOut.UI
                     footerPrevious.text = "< Prev File";
                     footerNext.text = "Next File >";
                     pageCounterLabel.text = count > 0
-                        ? string.Format("file {0} of {1}", selectedProfileIndex + 1, count) : "";
+                        ? string.Format("File {0} of {1}", selectedProfileIndex + 1, count) : "";
                     showNav = true;
                 }
                 else
@@ -453,8 +470,10 @@ namespace OfficeFlipOut.UI
                 pageCounterLabel.text = "";
                 showNav = false;
             }
+            SetVisible(footerBackDossier, tab == ClipboardTab.Directory && dossierOpen);
             SetVisible(footerPrevious, showNav);
             SetVisible(footerNext, showNav);
+            SetVisible(footerCounterWrap, showNav);
         }
 
         private void UpdateDirectoryPageCounter()
@@ -464,7 +483,7 @@ namespace OfficeFlipOut.UI
             {
                 int page = (WrapIndex(pageStart, count) / CardsPerPage) + 1;
                 int total = Mathf.CeilToInt((float)count / CardsPerPage);
-                pageCounterLabel.text = string.Format("pg. {0} / {1}", page, total);
+                pageCounterLabel.text = string.Format("Page {0} / {1}", page, total);
             }
             else
             {
@@ -484,6 +503,7 @@ namespace OfficeFlipOut.UI
             SetVisible(dossierView, true);
             RefreshDetail();
             UpdateFooter(ClipboardUIState.ActiveTab);
+            UpdateDossierPaperDecor(ClipboardUIState.IsOpen);
         }
 
         private void CloseDossier()
@@ -494,6 +514,7 @@ namespace OfficeFlipOut.UI
             SetVisible(directoryGridView, true);
             RefreshDirectory();
             UpdateFooter(ClipboardUIState.ActiveTab);
+            UpdateDossierPaperDecor(ClipboardUIState.IsOpen);
         }
 
         // ----------------------------------------------------------------
@@ -745,9 +766,19 @@ namespace OfficeFlipOut.UI
                 nameLabel.AddToClassList("npc-progress-name");
                 header.Add(nameLabel);
 
+                Label statusLabel = new Label(
+                    locked ? "LOCKED" :
+                    snap.isFlippedOut ? "FLIPPED OUT" :
+                    snap.currentRage > 0 ? "AGITATED" : "CALM");
+                statusLabel.AddToClassList("npc-progress-status");
+                if (snap.isFlippedOut) statusLabel.AddToClassList("npc-flipped");
+                else if (locked) statusLabel.AddToClassList("npc-locked");
+
                 if (!locked)
                 {
-                    // Inline rage bar
+                    VisualElement moodGroup = new VisualElement();
+                    moodGroup.AddToClassList("npc-mood-group");
+
                     VisualElement barTrack = new VisualElement();
                     barTrack.AddToClassList("npc-rage-bar-track");
                     VisualElement barFill = new VisualElement();
@@ -757,17 +788,14 @@ namespace OfficeFlipOut.UI
                     barFill.style.width = new StyleLength(new Length(ragePct, LengthUnit.Percent));
                     if (snap.currentRage >= req - 1) barFill.AddToClassList("rage-high");
                     barTrack.Add(barFill);
-                    header.Add(barTrack);
+                    moodGroup.Add(barTrack);
+                    moodGroup.Add(statusLabel);
+                    header.Add(moodGroup);
                 }
-
-                Label statusLabel = new Label(
-                    locked ? "LOCKED" :
-                    snap.isFlippedOut ? "FLIPPED OUT" :
-                    snap.currentRage > 0 ? "AGITATED" : "CALM");
-                statusLabel.AddToClassList("npc-progress-status");
-                if (snap.isFlippedOut) statusLabel.AddToClassList("npc-flipped");
-                else if (locked) statusLabel.AddToClassList("npc-locked");
-                header.Add(statusLabel);
+                else
+                {
+                    header.Add(statusLabel);
+                }
 
                 row.Add(header);
 
