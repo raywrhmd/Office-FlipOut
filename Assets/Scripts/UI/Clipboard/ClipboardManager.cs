@@ -219,20 +219,20 @@ namespace OfficeFlipOut.UI
             //   top:    tabs(8..48) header(52..92) rule(96..97)
             //   bottom: footer(8..42) rule(46..47)
             //   content fills 101..paper-51
-            const float pad = 18f;
-            const float topPad = 8f;
-            const float gap = 4f;
-            float tabsTop = topPad;                         // 8
-            float tabsBot = tabsTop + 40f;                  // 48
-            float headerTop = tabsBot + gap;                // 52
-            float headerBot = headerTop + 40f;              // 92
-            float topRuleTop = headerBot + gap;             // 96
-            float topRuleBot = topRuleTop + 1f;             // 97
-            float contentTop = topRuleBot + gap;            // 101
-            float footerH = 34f;
-            float botPad = 8f;
-            float footerBot = botPad;                       // 8
-            float footerTop = footerBot + footerH;          // 42
+            const float pad = 20f;
+            const float topPad = 10f;
+            const float gap = 6f;
+            float tabsTop = topPad;                         // 10
+            float tabsBot = tabsTop + 48f;                  // 58
+            float headerTop = tabsBot + gap;                // 64
+            float headerBot = headerTop + 74f;              // 138
+            float topRuleTop = headerBot + gap;             // 144
+            float topRuleBot = topRuleTop + 1f;             // 121
+            float contentTop = topRuleBot + gap;            // 127
+            float footerH = 42f;
+            float botPad = 10f;
+            float footerBot = botPad;                       // 10
+            float footerTop = footerBot + footerH;          // 52
             float botRuleBot = footerTop + gap;             // 46
             float botRuleTop = botRuleBot + 1f;             // 47
             float contentBot = botRuleTop + gap;            // 51
@@ -260,7 +260,7 @@ namespace OfficeFlipOut.UI
             clipRt.pivot = new Vector2(0.5f, 0.5f);
             clipRt.localRotation = Quaternion.identity;
             clipRt.sizeDelta = new Vector2(108f, 160f);
-            clipRt.anchoredPosition = new Vector2(0f, 58f);
+            clipRt.anchoredPosition = new Vector2(0f, 48f);
 
             Image img = clip.AddComponent<Image>();
             Sprite sprite = UIFactory.ClipboardClipSprite;
@@ -300,13 +300,13 @@ namespace OfficeFlipOut.UI
         private void BuildHeader(Transform paper, float pad, float top, float bot)
         {
             GameObject header = PinTopStrip(paper, "Header", pad, top, bot);
-            UIFactory.VerticalGroup(header, TextAnchor.UpperCenter, 1, expandWidth: true, expandHeight: true);
+            UIFactory.VerticalGroup(header, TextAnchor.MiddleCenter, 6, expandWidth: true, expandHeight: true);
 
             UIFactory.Label("Title", header.transform, "HR CLIPBOARD",
-                22, FontStyle.Bold, UIFactory.TextDark, TextAnchor.MiddleCenter);
+                38, FontStyle.Bold, UIFactory.TextDark, TextAnchor.MiddleCenter);
             UIFactory.Label("Subtitle", header.transform,
                 "Employee Observation & Incident Log",
-                11, FontStyle.Italic, UIFactory.TextHandwritten, TextAnchor.MiddleCenter);
+                17, FontStyle.Italic, UIFactory.TextHandwritten, TextAnchor.MiddleCenter);
         }
 
         private void BuildContent(Transform paper, float pad, float topInset, float botInset)
@@ -381,14 +381,14 @@ namespace OfficeFlipOut.UI
             UIFactory.HorizontalGroup(footer, spacing: 8, expandHeight: true);
 
             footerPrevious = UIFactory.Button("Previous", footer.transform, "< Prev Page",
-                UIFactory.FooterBg, UIFactory.FooterText, 14);
+                UIFactory.FooterBg, UIFactory.FooterText, 17);
             footerPrevious.GetComponent<LayoutElement>().flexibleWidth = 0.7f;
             footerPreviousLabel = footerPrevious.GetComponentInChildren<Text>();
 
             GameObject counterWrap = UIFactory.Rect("CounterWrap", footer.transform);
             LayoutElement cle = counterWrap.AddComponent<LayoutElement>();
             cle.flexibleWidth = 1.4f;
-            cle.minHeight = 36;
+            cle.minHeight = 42;
             pageCounterLabel = UIFactory.PageCounter("PageCounter", counterWrap.transform);
             RectTransform pcRt = pageCounterLabel.GetComponent<RectTransform>();
             pcRt.anchorMin = Vector2.zero;
@@ -397,11 +397,11 @@ namespace OfficeFlipOut.UI
             pcRt.offsetMax = Vector2.zero;
 
             footerClose = UIFactory.Button("Close", footer.transform, "Close [Tab]",
-                UIFactory.FooterBg, UIFactory.FooterText, 14);
+                UIFactory.FooterBg, UIFactory.FooterText, 17);
             footerClose.GetComponent<LayoutElement>().flexibleWidth = 0.9f;
 
             footerNext = UIFactory.Button("Next", footer.transform, "Next Page >",
-                UIFactory.FooterBg, UIFactory.FooterText, 14);
+                UIFactory.FooterBg, UIFactory.FooterText, 17);
             footerNext.GetComponent<LayoutElement>().flexibleWidth = 0.7f;
             footerNextLabel = footerNext.GetComponentInChildren<Text>();
         }

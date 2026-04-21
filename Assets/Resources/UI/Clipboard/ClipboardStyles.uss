@@ -79,7 +79,7 @@
 .clipboard-clip {
     position: absolute;
     left: 686px;
-    top: -138px;
+    top: -100px;
     width: 108px;
     height: 160px;
     background-image: resource('UI/Clipboard/clipboard_clip');
@@ -210,14 +210,14 @@
     bottom: 8px;
 }
 
-/* ---- Sticky Tabs (y: 0..40) ---- */
+/* ---- Sticky Tabs (y: 0..48) ---- */
 
 .sticky-tabs {
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
-    height: 40px;
+    height: 48px;
     flex-direction: row;
     justify-content: center;
     align-items: stretch;
@@ -225,9 +225,9 @@
 
 .sticky-tab-root {
     flex-grow: 1;
-    margin-left: 4px;
-    margin-right: 4px;
-    border-radius: 3px;
+    margin-left: 6px;
+    margin-right: 6px;
+    border-radius: 4px;
     overflow: visible;
 
     transition-property: scale, background-color;
@@ -245,7 +245,7 @@
     top: 3px;
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.137);
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
 .sticky-tab-btn {
@@ -258,7 +258,7 @@
     border-width: 0;
     color: rgb(40, 32, 22);
     -unity-font-style: bold;
-    font-size: 16px;
+    font-size: 18px;
     -unity-text-align: middle-center;
 }
 
@@ -270,32 +270,32 @@
 .tab-green.tab-active  { background-color: rgb(185, 240, 185); }
 .tab-blue.tab-active   { background-color: rgb(175, 215, 255); }
 
-/* ---- Header (y: 44..84) ---- */
+/* ---- Header (y: 54..128) ---- */
 
 .header {
     position: absolute;
     left: 0;
     right: 0;
-    top: 44px;
-    height: 42px;
+    top: 54px;
+    height: 74px;
     justify-content: center;
     align-items: center;
 }
 
 .title {
-    font-size: 26px;
+    font-size: 38px;
     -unity-font-style: bold;
     color: rgb(38, 28, 18);
     -unity-text-align: middle-center;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
 }
 
 .subtitle {
-    font-size: 13px;
+    font-size: 17px;
     -unity-font-style: italic;
     color: rgb(100, 90, 75);
     -unity-text-align: middle-center;
-    margin-top: 1px;
+    margin-top: 6px;
 }
 
 /* ---- Rules (static 1px lines) ---- */
@@ -304,7 +304,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: 88px;
+    top: 140px;
     height: 1px;
     background-color: rgba(180, 166, 146, 0.314);
 }
@@ -313,7 +313,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 39px;
+    bottom: 48px;
     height: 1px;
     background-color: rgba(180, 166, 146, 0.314);
 }
@@ -324,8 +324,8 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: 93px;
-    bottom: 44px;
+    top: 147px;
+    bottom: 54px;
 }
 
 .panel {
@@ -337,24 +337,24 @@
     flex-direction: column;
 }
 
-/* ---- Footer (bottom 34px) ---- */
+/* ---- Footer (bottom 42px) ---- */
 
 .footer {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    height: 34px;
+    height: 42px;
     flex-direction: row;
     align-items: stretch;
 }
 
 .footer-btn {
-    height: 36px;
+    height: 42px;
     background-color: rgb(152, 96, 50);
     color: rgb(252, 240, 222);
     -unity-font-style: bold;
-    font-size: 15px;
+    font-size: 17px;
     border-width: 0;
     border-radius: 4px;
 
@@ -365,8 +365,8 @@
 .footer-btn:hover { scale: 1.05 1.05; }
 .footer-btn:active { scale: 0.95 0.95; }
 
-.footer-btn-nav   { flex-grow: 0.7; margin-left: 2px; margin-right: 2px; }
-.footer-btn-close { flex-grow: 0.9; margin-left: 4px; margin-right: 4px; }
+.footer-btn-nav   { flex-grow: 0.7; margin-left: 4px; margin-right: 4px; }
+.footer-btn-close { flex-grow: 0.9; margin-left: 6px; margin-right: 6px; }
 
 .footer-counter-wrap {
     flex-grow: 1.4;
@@ -375,7 +375,7 @@
 }
 
 .page-counter {
-    font-size: 14px;
+    font-size: 16px;
     -unity-font-style: italic;
     color: rgb(148, 132, 112);
     -unity-text-align: middle-center;

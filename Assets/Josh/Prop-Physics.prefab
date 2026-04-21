@@ -156,7 +156,7 @@ MonoBehaviour:
   reactionCooldown: 0.1
   extraUpImpulseRange: {x: 0.5, y: 2}
   torqueMultiplierRange: {x: 0.7, y: 1.6}
-  buildupDelay: 0.05
+  buildupDelay: 0.5
   buildupDuration: 0.8
   vibrationBurstsPerSecond: 30
   shakeImpulseRange: {x: 0.03, y: 0.2}

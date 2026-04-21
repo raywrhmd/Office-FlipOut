@@ -269,7 +269,7 @@ namespace OfficeFlipOut.UI
 
         public static Text PageCounter(string name, Transform parent)
         {
-            return Label(name, parent, "", 14, FontStyle.Italic,
+            return Label(name, parent, "", 16, FontStyle.Italic,
                 TextMuted, TextAnchor.MiddleCenter);
         }
 
@@ -290,7 +290,7 @@ namespace OfficeFlipOut.UI
             tabRoot.GetComponent<RectTransform>().localRotation =
                 Quaternion.Euler(0f, 0f, rotation);
 
-            Text label = Label("Label", tabRoot.transform, labelText, 15, FontStyle.Bold,
+            Text label = Label("Label", tabRoot.transform, labelText, 18, FontStyle.Bold,
                 TabTextDark, TextAnchor.MiddleCenter);
             label.raycastTarget = false;
             RectTransform labelRt = label.GetComponent<RectTransform>();

@@ -186,9 +186,9 @@ namespace OfficeFlipOut.UI
             card.portrait.color = UIFactory.PortraitPlaceholder;
             card.portrait.preserveAspect = true;
             LayoutElement pLE = portraitGo.AddComponent<LayoutElement>();
-            pLE.minHeight = 50;
-            pLE.preferredHeight = 80;
-            pLE.flexibleHeight = 0.5f;
+            pLE.minHeight = 120;
+            pLE.preferredHeight = 180;
+            pLE.flexibleHeight = 0;
 
             // Rage face badge — overlaid on the portrait's bottom-right corner
             GameObject rageFaceGo = UIFactory.Rect("RageFace", portraitGo.transform,
