@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a29417f9740a041b79b59f196abbf9e0, type: 3}
+  m_Name: EmployeeProfile_Tom_T._Thomson
+  m_EditorClassIdentifier: Assembly-CSharp::OfficeFlipOut.Data.EmployeeProfileData
+  npcId: npc_3
+  displayName: Tommy
+  role: Coworker
+  colorIdentity: Green/Blue
+  portrait: {fileID: 2082917662, guid: 95d68c778eaa14994ac3c2537ae485c0, type: 3}
+  personalitySummary: Chill and hard to rattle. Requires layered sabotage and better
+    setup.
+  sabotageHint: Prime the space first, then chain multiple disliked interactions
+    in one cycle.
+  likes:
+  - Low stress
+  - Clean air
+  - Quiet corners
+  dislikes:
+  - Cigarette smoke
+  - Persistent pranks
+  - Desk tampering
+  difficultyTier: 1
+  startsLocked: 0
+  requiresAllCoworkersFlipped: 0
+  scheduleBlocks:
+  - label: Deep Work
+    location: Back Desk
+    startHour: 8
+    endHour: 12
+  - label: Smoke Patrol
+    location: Hallway
+    startHour: 12
+    endHour: 13
+  - label: Deep Work
+    location: Back Desk
+    startHour: 13
+    endHour: 17

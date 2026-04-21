@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a29417f9740a041b79b59f196abbf9e0, type: 3}
+  m_Name: EmployeeProfile_Sandra_Cain
+  m_EditorClassIdentifier: Assembly-CSharp::OfficeFlipOut.Data.EmployeeProfileData
+  npcId: npc_1
+  displayName: Sandra
+  role: Coworker
+  colorIdentity: Purple
+  portrait: {fileID: 703405830, guid: b1193fe410d974dd7b206ddaad92556f, type: 3}
+  personalitySummary: Chic and style-first. Adds puzzle depth through timing and
+    social space awareness.
+  sabotageHint: Use fish smell when she crosses shared spaces. Hit her routine windows.
+  likes:
+  - Clean aesthetics
+  - Fresh office scent
+  dislikes:
+  - Microwave fish
+  - Messy desk props
+  - Loud disruptions
+  difficultyTier: 1
+  startsLocked: 0
+  requiresAllCoworkersFlipped: 0
+  scheduleBlocks:
+  - label: Planning
+    location: Desk Row B
+    startHour: 8
+    endHour: 10
+  - label: Kitchen Pass
+    location: Microwave Zone
+    startHour: 10
+    endHour: 11
+  - label: Client Prep
+    location: Meeting Area
+    startHour: 11
+    endHour: 15
+  - label: Desk Wrap
+    location: Desk Row B
+    startHour: 15
+    endHour: 17

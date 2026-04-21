@@ -11,8 +11,6 @@ namespace OfficeFlipOut.UI
     {
         private const int CardsPerPage = 3;
 
-        private static readonly float[] CardRotations = { 0f, 0f, 0f };
-
         public event Action<int> OpenProfileRequested;
         public event Action PageChanged;
 
@@ -112,19 +110,19 @@ namespace OfficeFlipOut.UI
             GameObject titleRow = UIFactory.Rect("TitleRow", transform);
             UIFactory.HorizontalGroup(titleRow, TextAnchor.MiddleLeft, 10, expandHeight: false);
             LayoutElement titleRowLE = titleRow.AddComponent<LayoutElement>();
-            titleRowLE.preferredHeight = 24;
+            titleRowLE.preferredHeight = 28;
 
             UIFactory.Label("PanelTitle", titleRow.transform, "EMPLOYEE DIRECTORY",
-                20, FontStyle.Bold, UIFactory.TextDark);
+                22, FontStyle.Bold, UIFactory.TextDark);
 
             Text note = UIFactory.Label("Note", titleRow.transform,
                 "- observe before acting",
-                13, FontStyle.Italic, UIFactory.TextHandwritten);
+                15, FontStyle.Italic, UIFactory.TextHandwritten);
             note.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
             // Card grid
             GameObject grid = UIFactory.Rect("StaffGrid", transform);
-            UIFactory.HorizontalGroup(grid, TextAnchor.UpperCenter, 14, expandHeight: true);
+            UIFactory.HorizontalGroup(grid, TextAnchor.UpperCenter, 10, expandHeight: true);
             grid.AddComponent<LayoutElement>().flexibleHeight = 1;
 
             for (int i = 0; i < CardsPerPage; i++)
@@ -137,7 +135,7 @@ namespace OfficeFlipOut.UI
 
             card.root = UIFactory.Rect("Card" + slotIndex, gridParent);
             RectTransform rootRt = card.root.GetComponent<RectTransform>();
-            rootRt.localRotation = Quaternion.Euler(0f, 0f, CardRotations[slotIndex]);
+            rootRt.localRotation = Quaternion.identity;
 
             // Card shadow (excluded from layout)
             Image cardShadow = UIFactory.FilledImage("CardShadow", card.root.transform, UIFactory.CardShadow,
@@ -152,15 +150,16 @@ namespace OfficeFlipOut.UI
                 TextAnchor.UpperLeft, 3, new RectOffset(0, 0, 0, 4));
             layout.childForceExpandHeight = false;
             card.root.AddComponent<LayoutElement>().flexibleWidth = 1;
+            card.root.GetComponent<LayoutElement>().minWidth = 250;
 
             // Color identity strip at top
             card.colorStrip = UIFactory.ColorStrip("ColorStrip", card.root.transform,
-                UIFactory.PortraitPlaceholder, 6f);
+                UIFactory.PortraitPlaceholder, 8f);
 
             // Inner padding
             GameObject inner = UIFactory.Rect("Inner", card.root.transform);
-            UIFactory.VerticalGroup(inner, TextAnchor.UpperLeft, 3,
-                new RectOffset(10, 10, 4, 0));
+            UIFactory.VerticalGroup(inner, TextAnchor.UpperLeft, 4,
+                new RectOffset(12, 12, 6, 0));
             LayoutElement innerLE = inner.AddComponent<LayoutElement>();
             innerLE.flexibleWidth = 1;
             innerLE.flexibleHeight = 1;
@@ -170,15 +169,16 @@ namespace OfficeFlipOut.UI
             UIFactory.HorizontalGroup(nameRow, TextAnchor.MiddleLeft, 6, expandHeight: false);
 
             card.nameLabel = UIFactory.Label("Name", nameRow.transform, "",
-                15, FontStyle.Bold, UIFactory.TextDark);
+                19, FontStyle.Bold, UIFactory.TextDark);
             card.nameLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
             card.difficultyLabel = UIFactory.Label("Diff", nameRow.transform, "",
-                12, FontStyle.Bold, UIFactory.TextMuted, TextAnchor.MiddleRight);
-            card.difficultyLabel.gameObject.AddComponent<LayoutElement>().minWidth = 60;
+                14, FontStyle.Bold, UIFactory.TextMuted, TextAnchor.MiddleRight);
+            card.difficultyLabel.gameObject.AddComponent<LayoutElement>().minWidth = 56;
 
             card.roleLabel = UIFactory.Label("Role", inner.transform, "",
-                13, FontStyle.Italic, UIFactory.TextSubtle);
+                14, FontStyle.Italic, UIFactory.TextSubtle);
+            card.roleLabel.gameObject.AddComponent<LayoutElement>().minHeight = 20;
 
             // Portrait — capped flex so items below it (status, dislikes) get room
             GameObject portraitGo = UIFactory.Rect("Portrait", inner.transform);
@@ -186,9 +186,9 @@ namespace OfficeFlipOut.UI
             card.portrait.color = UIFactory.PortraitPlaceholder;
             card.portrait.preserveAspect = true;
             LayoutElement pLE = portraitGo.AddComponent<LayoutElement>();
-            pLE.minHeight = 50;
-            pLE.preferredHeight = 80;
-            pLE.flexibleHeight = 0.5f;
+            pLE.minHeight = 104;
+            pLE.preferredHeight = 168;
+            pLE.flexibleHeight = 0;
 
             // Rage face badge — overlaid on the portrait's bottom-right corner
             GameObject rageFaceGo = UIFactory.Rect("RageFace", portraitGo.transform,
@@ -196,7 +196,7 @@ namespace OfficeFlipOut.UI
                 anchorMax: new Vector2(1f, 0f));
             RectTransform rfRt = rageFaceGo.GetComponent<RectTransform>();
             rfRt.pivot = new Vector2(1f, 0f);
-            rfRt.sizeDelta = new Vector2(34, 34);
+            rfRt.sizeDelta = new Vector2(36, 36);
             rfRt.anchoredPosition = new Vector2(4f, -4f);
             rageFaceGo.AddComponent<LayoutElement>().ignoreLayout = true;
 
@@ -218,11 +218,11 @@ namespace OfficeFlipOut.UI
             Image statusBg = card.statusBadge.AddComponent<Image>();
             statusBg.color = UIFactory.StatusActive;
             LayoutElement statusLE = card.statusBadge.AddComponent<LayoutElement>();
-            statusLE.preferredHeight = 20;
-            statusLE.minHeight = 18;
+            statusLE.preferredHeight = 24;
+            statusLE.minHeight = 24;
 
             card.statusLabel = UIFactory.Label("StatusText", card.statusBadge.transform,
-                "ACTIVE", 12, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter);
+                "ACTIVE", 13, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter);
             RectTransform srt = card.statusLabel.GetComponent<RectTransform>();
             srt.anchorMin = Vector2.zero;
             srt.anchorMax = Vector2.one;
@@ -232,13 +232,14 @@ namespace OfficeFlipOut.UI
             UIFactory.DashedLine("CardSep", inner.transform);
 
             card.dislikesLabel = UIFactory.Label("Dislikes", inner.transform,
-                "", 13, FontStyle.Normal, UIFactory.TextMedium);
+                "", 15, FontStyle.Normal, UIFactory.TextMedium);
             card.dislikesLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
-            card.dislikesLabel.gameObject.AddComponent<LayoutElement>().minHeight = 16;
+            LayoutElement dislikesLE = card.dislikesLabel.gameObject.AddComponent<LayoutElement>();
+            dislikesLE.minHeight = 36;
 
             card.locationLabel = UIFactory.Label("Location", inner.transform,
-                "", 12, FontStyle.Italic, UIFactory.TextHandwritten);
-            card.locationLabel.gameObject.AddComponent<LayoutElement>().minHeight = 15;
+                "", 15, FontStyle.Italic, UIFactory.TextHandwritten);
+            card.locationLabel.gameObject.AddComponent<LayoutElement>().minHeight = 22;
 
             // Lock overlay
             GameObject lockBadge = UIFactory.Rect("LockBadge", inner.transform);
@@ -248,7 +249,7 @@ namespace OfficeFlipOut.UI
             lockBadge.SetActive(false);
 
             card.lockLabel = UIFactory.Label("LockLabel", lockBadge.transform, "",
-                12, FontStyle.Bold, UIFactory.LockBadgeText, TextAnchor.MiddleCenter);
+                13, FontStyle.Bold, UIFactory.LockBadgeText, TextAnchor.MiddleCenter);
             RectTransform lrt = card.lockLabel.GetComponent<RectTransform>();
             lrt.anchorMin = Vector2.zero;
             lrt.anchorMax = Vector2.one;
@@ -257,11 +258,11 @@ namespace OfficeFlipOut.UI
 
             // Open Profile button
             GameObject btnWrap = UIFactory.Rect("BtnWrap", card.root.transform);
-            UIFactory.VerticalGroup(btnWrap, padding: new RectOffset(8, 8, 0, 0));
-            btnWrap.AddComponent<LayoutElement>().preferredHeight = 32;
+            UIFactory.VerticalGroup(btnWrap, padding: new RectOffset(8, 8, 4, 6));
+            btnWrap.AddComponent<LayoutElement>().preferredHeight = 46;
 
             card.openButton = UIFactory.Button("OpenProfile", btnWrap.transform,
-                "Open Dossier", UIFactory.ButtonBrown, UIFactory.ButtonBrownText, 14);
+                "Open Dossier", UIFactory.ButtonBrown, UIFactory.ButtonBrownText, 16);
 
             int capturedSlot = slotIndex;
             card.openButton.onClick.AddListener(() =>
@@ -271,10 +272,8 @@ namespace OfficeFlipOut.UI
                 OpenProfileRequested?.Invoke(WrapIndex(pageStart + capturedSlot, count));
             });
 
-            // Push pin at the card's top edge, on the color strip (no text there)
-            float pinX = slotIndex == 1 ? 0.5f : (slotIndex == 0 ? 0.2f : 0.8f);
-            UIFactory.PushPin(card.root.transform, new Vector2(pinX, 1.0f), 28f,
-                slotIndex * 8f - 8f);
+            // Single centered pin on the color strip (matches UI Toolkit clipboard)
+            UIFactory.PushPin(card.root.transform, new Vector2(0.5f, 1.0f), 22f, -4f);
 
             return card;
         }

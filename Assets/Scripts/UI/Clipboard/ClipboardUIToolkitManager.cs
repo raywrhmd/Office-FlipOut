@@ -11,6 +11,7 @@ namespace OfficeFlipOut.UI
     [RequireComponent(typeof(UIDocument))]
     public class ClipboardUIToolkitManager : MonoBehaviour
     {
+        private const string BrutusNpcId = "npc_2";
         private const int CardsPerPage = 3;
         private const int RuledLineCount = 20;
 
@@ -24,6 +25,11 @@ namespace OfficeFlipOut.UI
         [Header("Data")]
         [SerializeField] private EmployeeProfileDatabase database;
 
+        [Header("Main Menu (Toolkit)")]
+        [Tooltip("Blaine title art; assign Assets/Art/Sprites/Blaine/title.png")]
+        [SerializeField] private Texture2D mainMenuTitleArt;
+        [SerializeField] private string mainMenuSubtitleOverride;
+
         private UIDocument uiDocument;
         private VisualElement root;
         private bool initialized;
@@ -36,6 +42,18 @@ namespace OfficeFlipOut.UI
         private VisualElement shell;
         private VisualElement dimmer;
         private VisualElement board;
+        private VisualElement clipboardPaper;
+
+        private VisualElement mainMenuShell;
+        private VisualElement mainMenuBoard;
+        private VisualElement mainMenuDimmer;
+        private VisualElement mainMenuTitleImage;
+        private Label mainMenuTitleFallback;
+        private Label mainMenuSubtitleLabel;
+        private Button mainMenuStart;
+        private Button mainMenuQuit;
+        private VisualElement clipboardHint;
+        private bool mainMenuWired;
 
         // Tabs (3: Directory, Progress, Map)
         private VisualElement tabDirectoryRoot, tabProgressRoot, tabMapRoot;
@@ -48,7 +66,9 @@ namespace OfficeFlipOut.UI
         private bool dossierOpen;
 
         // Footer (P3)
+        private Button footerBackDossier;
         private Button footerPrevious, footerNext, footerClose;
+        private VisualElement footerCounterWrap;
         private Label pageCounterLabel;
         private VisualElement footerRow;
 
@@ -121,12 +141,51 @@ namespace OfficeFlipOut.UI
         {
             ClipboardUIState.ClipboardOpenChanged -= HandleOpenChanged;
             ClipboardUIState.ClipboardTabChanged -= HandleTabChanged;
+            GameRuntimeState.MainMenuOpenChanged -= HandleMainMenuOpenChanged;
+            if (progressTracker != null)
+            {
+                progressTracker.ProgressChanged -= HandleProgressTrackerChanged;
+            }
             if (cursorSnapshotCaptured) RestoreCursorSnapshot();
+        }
+
+        private void HandleProgressTrackerChanged()
+        {
+            if (!initialized || !ClipboardUIState.IsOpen)
+            {
+                return;
+            }
+
+            ClipboardTab tab = ClipboardUIState.ActiveTab;
+            if (tab == ClipboardTab.Directory)
+            {
+                if (dossierOpen) RefreshDetail();
+                else RefreshDirectory();
+            }
+            else if (tab == ClipboardTab.Progress)
+            {
+                RefreshProgress();
+            }
         }
 
         private void Update()
         {
             if (!initialized) { TryInitialize(); if (!initialized) return; }
+
+            if (GameRuntimeState.IsMainMenuOpen)
+            {
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                {
+                    GameRuntimeState.SetMainMenuOpen(false);
+                    return;
+                }
+                if (Input.GetKeyDown(closeKey) || Input.GetKeyDown(KeyCode.Escape))
+                {
+                    QuitGame();
+                    return;
+                }
+                return;
+            }
 
             if (Input.GetKeyDown(toggleKey))
                 ClipboardUIState.SetOpen(!ClipboardUIState.IsOpen);
@@ -155,7 +214,9 @@ namespace OfficeFlipOut.UI
             if (shell == null) return;
 
             GenerateRuledLines();
+            GenerateMainMenuRuledLines();
             WireEvents();
+            WireMainMenuIfNeeded();
 
             ClipboardUIState.SetTab(ClipboardTab.Directory);
             ClipboardUIState.SetOpen(startOpen);
@@ -168,7 +229,22 @@ namespace OfficeFlipOut.UI
                 dimmer.AddToClassList("anim-hidden");
             }
 
+            ApplyMainMenuTitleArt();
+            if (!string.IsNullOrWhiteSpace(mainMenuSubtitleOverride) && mainMenuSubtitleLabel != null)
+            {
+                mainMenuSubtitleLabel.text = mainMenuSubtitleOverride;
+            }
+
+            if (mainMenuShell != null)
+            {
+                GameRuntimeState.MainMenuOpenChanged += HandleMainMenuOpenChanged;
+            }
+
             ApplyState();
+            if (mainMenuShell != null)
+            {
+                ApplyMainMenuVisibility();
+            }
         }
 
         private void ResolveReferences()
@@ -181,11 +257,20 @@ namespace OfficeFlipOut.UI
             if (database == null)
             {
                 database = Resources.Load<EmployeeProfileDatabase>("EmployeeProfileDatabase");
+#if UNITY_EDITOR
                 if (database == null)
                 {
-                    database = ScriptableObject.CreateInstance<EmployeeProfileDatabase>();
-                    database.hideFlags = HideFlags.DontSave;
+                    Debug.LogWarning(
+                        "[ClipboardUIToolkitManager] Assign EmployeeProfileDatabase in the inspector or add Assets/Resources/EmployeeProfileDatabase.asset (menu: Office Flip Out / Generate Default Employee Data).",
+                        this);
                 }
+#endif
+            }
+
+            if (progressTracker != null)
+            {
+                progressTracker.ProgressChanged -= HandleProgressTrackerChanged;
+                progressTracker.ProgressChanged += HandleProgressTrackerChanged;
             }
         }
 
@@ -194,6 +279,7 @@ namespace OfficeFlipOut.UI
             shell = root.Q<VisualElement>("ClipboardShell");
             dimmer = root.Q<VisualElement>("Dimmer");
             board = root.Q<VisualElement>("Board");
+            clipboardPaper = root.Q<VisualElement>("ClipboardPaper");
 
             tabDirectoryRoot = root.Q<VisualElement>("TabDirectoryRoot");
             tabProgressRoot = root.Q<VisualElement>("TabProgressRoot");
@@ -207,9 +293,11 @@ namespace OfficeFlipOut.UI
             dossierView = root.Q<VisualElement>("DossierView");
 
             footerRow = root.Q<VisualElement>("FooterRow");
+            footerBackDossier = root.Q<Button>("FooterBackDossier");
             footerPrevious = root.Q<Button>("FooterPrevious");
             footerNext = root.Q<Button>("FooterNext");
             footerClose = root.Q<Button>("FooterClose");
+            footerCounterWrap = root.Q<VisualElement>("FooterCounterWrap");
             pageCounterLabel = root.Q<Label>("PageCounter");
 
             quitPopup = root.Q<VisualElement>("QuitPopup");
@@ -265,6 +353,16 @@ namespace OfficeFlipOut.UI
             progressNextAction = root.Q<Label>("ProgressNextAction");
             progressSecurityLabel = root.Q<Label>("ProgressSecurityLabel");
             progressSecurityFill = root.Q<VisualElement>("ProgressSecurityFill");
+
+            mainMenuShell = root.Q<VisualElement>("MainMenuShell");
+            mainMenuBoard = root.Q<VisualElement>("MainMenuBoard");
+            mainMenuDimmer = root.Q<VisualElement>("MainMenuDimmer");
+            mainMenuTitleImage = root.Q<VisualElement>("MainMenuTitleImage");
+            mainMenuTitleFallback = root.Q<Label>("MainMenuTitleFallback");
+            mainMenuSubtitleLabel = root.Q<Label>("MainMenuSubtitle");
+            mainMenuStart = root.Q<Button>("MainMenuStart");
+            mainMenuQuit = root.Q<Button>("MainMenuQuit");
+            clipboardHint = root.Q<VisualElement>("ClipboardHint");
         }
 
         private void GenerateRuledLines()
@@ -283,6 +381,116 @@ namespace OfficeFlipOut.UI
             }
         }
 
+        private void GenerateMainMenuRuledLines()
+        {
+            VisualElement container = root.Q<VisualElement>("MainMenuRuledLines");
+            if (container == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < RuledLineCount; i++)
+            {
+                float yPercent = 100f * (1f - ((float)(i + 1) / (RuledLineCount + 1)));
+                VisualElement line = new VisualElement();
+                line.AddToClassList("ruled-line");
+                line.style.top = new StyleLength(new Length(yPercent, LengthUnit.Percent));
+                line.pickingMode = PickingMode.Ignore;
+                container.Add(line);
+            }
+        }
+
+        private void WireMainMenuIfNeeded()
+        {
+            if (mainMenuWired)
+            {
+                return;
+            }
+            if (mainMenuStart != null)
+            {
+                mainMenuStart.clicked += () => GameRuntimeState.SetMainMenuOpen(false);
+            }
+            if (mainMenuQuit != null)
+            {
+                mainMenuQuit.clicked += QuitGame;
+            }
+            mainMenuWired = true;
+        }
+
+        private void HandleMainMenuOpenChanged(bool _)
+        {
+            ApplyMainMenuVisibility();
+        }
+
+        private void ApplyMainMenuVisibility()
+        {
+            if (!initialized || mainMenuShell == null)
+            {
+                return;
+            }
+
+            bool open = GameRuntimeState.IsMainMenuOpen;
+            if (open)
+            {
+                ClipboardUIState.SetOpen(false);
+                mainMenuShell.RemoveFromClassList("hidden");
+                if (mainMenuDimmer != null)
+                {
+                    mainMenuDimmer.RemoveFromClassList("anim-hidden");
+                }
+                if (mainMenuBoard != null)
+                {
+                    mainMenuBoard.RemoveFromClassList("anim-closed");
+                }
+                if (mainMenuStart != null)
+                {
+                    mainMenuStart.Focus();
+                }
+            }
+            else
+            {
+                mainMenuShell.AddToClassList("hidden");
+                if (mainMenuDimmer != null)
+                {
+                    mainMenuDimmer.AddToClassList("anim-hidden");
+                }
+                if (mainMenuBoard != null)
+                {
+                    mainMenuBoard.AddToClassList("anim-closed");
+                }
+            }
+
+            ApplyCursor(ClipboardUIState.IsOpen || GameRuntimeState.IsMainMenuOpen);
+            UpdateClipboardHintVisibility();
+        }
+
+        private void ApplyMainMenuTitleArt()
+        {
+            if (mainMenuTitleImage == null)
+            {
+                return;
+            }
+
+            if (mainMenuTitleArt != null)
+            {
+                mainMenuTitleImage.style.backgroundImage = new StyleBackground(mainMenuTitleArt);
+                mainMenuTitleImage.RemoveFromClassList("hidden");
+                if (mainMenuTitleFallback != null)
+                {
+                    mainMenuTitleFallback.AddToClassList("hidden-title-fallback");
+                }
+            }
+            else
+            {
+                mainMenuTitleImage.style.backgroundImage = StyleKeyword.None;
+                mainMenuTitleImage.AddToClassList("hidden");
+                if (mainMenuTitleFallback != null)
+                {
+                    mainMenuTitleFallback.RemoveFromClassList("hidden-title-fallback");
+                }
+            }
+        }
+
         // ----------------------------------------------------------------
         // Event Wiring
         // ----------------------------------------------------------------
@@ -293,6 +501,8 @@ namespace OfficeFlipOut.UI
             root.Q<Button>("TabProgress").clicked += () => { CloseDossier(); ClipboardUIState.SetTab(ClipboardTab.Progress); };
             root.Q<Button>("TabMap").clicked += () => { CloseDossier(); ClipboardUIState.SetTab(ClipboardTab.Map); };
 
+            if (footerBackDossier != null)
+                footerBackDossier.clicked += CloseDossier;
             footerPrevious.clicked += HandleFooterPrevious;
             footerNext.clicked += HandleFooterNext;
             footerClose.clicked += () => ClipboardUIState.SetOpen(false);
@@ -303,8 +513,6 @@ namespace OfficeFlipOut.UI
                 if (cards[i].openButton != null)
                     cards[i].openButton.clicked += () => HandleOpenProfile(slot);
             }
-
-            root.Q<Button>("DetailBackBtn").clicked += CloseDossier;
 
             // Quit popup (P4)
             root.Q<Button>("QuitCornerBtn").clicked += () => SetVisible(quitPopup, true);
@@ -354,7 +562,7 @@ namespace OfficeFlipOut.UI
 
             UpdateStickyTabs(tab);
             UpdateFooter(tab);
-            ApplyCursor(isOpen);
+            ApplyCursor(ClipboardUIState.IsOpen || GameRuntimeState.IsMainMenuOpen);
 
             if (isOpen)
             {
@@ -365,6 +573,29 @@ namespace OfficeFlipOut.UI
                 }
                 if (tab == ClipboardTab.Progress) RefreshProgress();
             }
+
+            UpdateDossierPaperDecor(isOpen);
+            UpdateClipboardHintVisibility();
+        }
+
+        private void UpdateClipboardHintVisibility()
+        {
+            if (clipboardHint == null)
+            {
+                return;
+            }
+
+            bool shouldShow = !GameRuntimeState.IsMainMenuOpen && !ClipboardUIState.IsOpen;
+            clipboardHint.EnableInClassList("clipboard-hint--visible", shouldShow);
+        }
+
+        private void UpdateDossierPaperDecor(bool clipboardOpen)
+        {
+            if (clipboardPaper == null) return;
+            bool hideBoardClip = clipboardOpen
+                && ClipboardUIState.ActiveTab == ClipboardTab.Directory
+                && dossierOpen;
+            clipboardPaper.EnableInClassList("dossier-detail-open", hideBoardClip);
         }
 
         private void SetPanelVisible(VisualElement panel, bool visible)
@@ -403,7 +634,7 @@ namespace OfficeFlipOut.UI
                     footerPrevious.text = "< Prev File";
                     footerNext.text = "Next File >";
                     pageCounterLabel.text = count > 0
-                        ? string.Format("file {0} of {1}", selectedProfileIndex + 1, count) : "";
+                        ? string.Format("File {0} of {1}", selectedProfileIndex + 1, count) : "";
                     showNav = true;
                 }
                 else
@@ -421,8 +652,10 @@ namespace OfficeFlipOut.UI
                 pageCounterLabel.text = "";
                 showNav = false;
             }
+            SetVisible(footerBackDossier, tab == ClipboardTab.Directory && dossierOpen);
             SetVisible(footerPrevious, showNav);
             SetVisible(footerNext, showNav);
+            SetVisible(footerCounterWrap, showNav);
         }
 
         private void UpdateDirectoryPageCounter()
@@ -430,9 +663,10 @@ namespace OfficeFlipOut.UI
             int count = database != null ? database.Count : 0;
             if (count > 0)
             {
-                int page = (WrapIndex(pageStart, count) / CardsPerPage) + 1;
-                int total = Mathf.CeilToInt((float)count / CardsPerPage);
-                pageCounterLabel.text = string.Format("pg. {0} / {1}", page, total);
+                pageStart = ClampPageStart(pageStart, count);
+                int page = (pageStart / CardsPerPage) + 1;
+                int total = GetDirectoryPageCount(count);
+                pageCounterLabel.text = string.Format("Page {0} / {1}", page, total);
             }
             else
             {
@@ -452,6 +686,7 @@ namespace OfficeFlipOut.UI
             SetVisible(dossierView, true);
             RefreshDetail();
             UpdateFooter(ClipboardUIState.ActiveTab);
+            UpdateDossierPaperDecor(ClipboardUIState.IsOpen);
         }
 
         private void CloseDossier()
@@ -462,6 +697,7 @@ namespace OfficeFlipOut.UI
             SetVisible(directoryGridView, true);
             RefreshDirectory();
             UpdateFooter(ClipboardUIState.ActiveTab);
+            UpdateDossierPaperDecor(ClipboardUIState.IsOpen);
         }
 
         // ----------------------------------------------------------------
@@ -471,6 +707,7 @@ namespace OfficeFlipOut.UI
         private void RefreshDirectory()
         {
             int count = database != null ? database.Count : 0;
+            pageStart = ClampPageStart(pageStart, count);
 
             for (int i = 0; i < CardsPerPage; i++)
             {
@@ -479,7 +716,8 @@ namespace OfficeFlipOut.UI
 
                 if (count == 0) { ShowCardFallback(ref card); continue; }
 
-                int idx = WrapIndex(pageStart + i, count);
+                int idx = pageStart + i;
+                if (idx < 0 || idx >= count) { ShowCardFallback(ref card); continue; }
                 EmployeeProfileData profile = database.GetProfileAt(idx);
                 if (profile == null) { ShowCardFallback(ref card); continue; }
                 if (IsLocked(profile)) { ShowCardLocked(ref card); continue; }
@@ -561,9 +799,22 @@ namespace OfficeFlipOut.UI
             card.statusBadge.AddToClassList(flipped ? "status-flipped" : "status-active");
 
             Sprite face = snap != null ? snap.rageFaceSprite : null;
-            SetVisible(card.rageFace, face != null);
-            if (face != null && card.rageFace != null)
+            // Keep rage badge visible for all active employees to surface current emotional status.
+            SetVisible(card.rageFace, true);
+            if (card.rageFace == null)
+            {
+                return;
+            }
+
+            if (face != null)
+            {
                 card.rageFace.style.backgroundImage = new StyleBackground(face);
+            }
+            else
+            {
+                // Avoid stale sprite when no rage face is currently provided.
+                card.rageFace.style.backgroundImage = StyleKeyword.None;
+            }
         }
 
         // ----------------------------------------------------------------
@@ -592,7 +843,7 @@ namespace OfficeFlipOut.UI
             detailRole.text = profile.Role + "  /  " + profile.ColorIdentity;
             detailDifficulty.text = GetDifficultyLabel(profile.DifficultyTier);
             SetTextColor(detailDifficulty, GetDifficultyColor(profile.DifficultyTier));
-            detailPersonality.text = "\u201CPlaceholder\u201D";
+            detailPersonality.text = FormatPersonalityQuote(profile.PersonalitySummary);
             SetVisible(detailLockBanner, false);
 
             UpdateDetailStatusBadge(profile.NpcId);
@@ -694,12 +945,12 @@ namespace OfficeFlipOut.UI
 
             progressNpcList.Clear();
 
-            IReadOnlyList<EmployeeProfileData> profiles = database != null ? database.GetProfiles() : null;
-
             for (int i = 0; i < snaps.Count; i++)
             {
                 ProgressTracker.EmployeeProgressSnapshot snap = snaps[i];
-                EmployeeProfileData profile = profiles != null && i < profiles.Count ? profiles[i] : null;
+                EmployeeProfileData profile = database != null
+                    ? database.GetProfileByNpcId(snap.npcId)
+                    : null;
                 bool locked = profile != null && IsLocked(profile);
 
                 VisualElement row = new VisualElement();
@@ -713,9 +964,19 @@ namespace OfficeFlipOut.UI
                 nameLabel.AddToClassList("npc-progress-name");
                 header.Add(nameLabel);
 
+                Label statusLabel = new Label(
+                    locked ? "LOCKED" :
+                    snap.isFlippedOut ? "FLIPPED OUT" :
+                    snap.currentRage > 0 ? "AGITATED" : "CALM");
+                statusLabel.AddToClassList("npc-progress-status");
+                if (snap.isFlippedOut) statusLabel.AddToClassList("npc-flipped");
+                else if (locked) statusLabel.AddToClassList("npc-locked");
+
                 if (!locked)
                 {
-                    // Inline rage bar
+                    VisualElement moodGroup = new VisualElement();
+                    moodGroup.AddToClassList("npc-mood-group");
+
                     VisualElement barTrack = new VisualElement();
                     barTrack.AddToClassList("npc-rage-bar-track");
                     VisualElement barFill = new VisualElement();
@@ -725,17 +986,14 @@ namespace OfficeFlipOut.UI
                     barFill.style.width = new StyleLength(new Length(ragePct, LengthUnit.Percent));
                     if (snap.currentRage >= req - 1) barFill.AddToClassList("rage-high");
                     barTrack.Add(barFill);
-                    header.Add(barTrack);
+                    moodGroup.Add(barTrack);
+                    moodGroup.Add(statusLabel);
+                    header.Add(moodGroup);
                 }
-
-                Label statusLabel = new Label(
-                    locked ? "LOCKED" :
-                    snap.isFlippedOut ? "FLIPPED OUT" :
-                    snap.currentRage > 0 ? "AGITATED" : "CALM");
-                statusLabel.AddToClassList("npc-progress-status");
-                if (snap.isFlippedOut) statusLabel.AddToClassList("npc-flipped");
-                else if (locked) statusLabel.AddToClassList("npc-locked");
-                header.Add(statusLabel);
+                else
+                {
+                    header.Add(statusLabel);
+                }
 
                 row.Add(header);
 
@@ -744,9 +1002,37 @@ namespace OfficeFlipOut.UI
                 {
                     VisualElement taskRow = new VisualElement();
                     taskRow.AddToClassList("npc-task-row");
-                    AddTaskItem(taskRow, "Spill drink", snap.spilledDrink);
-                    AddTaskItem(taskRow, "Microwave fish", snap.microwavedFish);
-                    AddTaskItem(taskRow, "Take stapler", snap.tookStapler);
+
+                    int taskCount = Mathf.Clamp(snap.requiredSignals, 1, snap.npcId == BrutusNpcId ? 2 : 3);
+                    if (snap.npcId == BrutusNpcId)
+                    {
+                        if (taskCount >= 1)
+                        {
+                            AddTaskItem(taskRow, "Bring birthday cake near", snap.microwavedFish);
+                        }
+
+                        if (taskCount >= 2)
+                        {
+                            AddTaskItem(taskRow, "Knock over filing cabinet", snap.tookStapler);
+                        }
+                    }
+                    else
+                    {
+                        if (taskCount >= 1)
+                        {
+                            AddTaskItem(taskRow, "Spill drink", snap.spilledDrink);
+                        }
+
+                        if (taskCount >= 2)
+                        {
+                            AddTaskItem(taskRow, "Microwave fish", snap.microwavedFish);
+                        }
+
+                        if (taskCount >= 3)
+                        {
+                            AddTaskItem(taskRow, "Steal object", snap.tookStapler);
+                        }
+                    }
                     row.Add(taskRow);
                 }
 
@@ -792,7 +1078,8 @@ namespace OfficeFlipOut.UI
         {
             int count = database != null ? database.Count : 0;
             if (count <= 0) return;
-            int idx = WrapIndex(pageStart + slotIndex, count);
+            int idx = pageStart + slotIndex;
+            if (idx < 0 || idx >= count) return;
             OpenDossier(idx);
         }
 
@@ -800,7 +1087,11 @@ namespace OfficeFlipOut.UI
         {
             if (ClipboardUIState.ActiveTab != ClipboardTab.Directory) return;
             if (dossierOpen) PreviousProfile();
-            else { pageStart -= CardsPerPage; RefreshDirectory(); }
+            else
+            {
+                pageStart = Mathf.Max(0, pageStart - CardsPerPage);
+                RefreshDirectory();
+            }
             UpdateFooter(ClipboardUIState.ActiveTab);
         }
 
@@ -808,8 +1099,32 @@ namespace OfficeFlipOut.UI
         {
             if (ClipboardUIState.ActiveTab != ClipboardTab.Directory) return;
             if (dossierOpen) NextProfile();
-            else { pageStart += CardsPerPage; RefreshDirectory(); }
+            else
+            {
+                int count = database != null ? database.Count : 0;
+                int maxPageStart = GetMaxPageStart(count);
+                pageStart = Mathf.Min(maxPageStart, pageStart + CardsPerPage);
+                RefreshDirectory();
+            }
             UpdateFooter(ClipboardUIState.ActiveTab);
+        }
+
+        private static int GetDirectoryPageCount(int count)
+        {
+            if (count <= 0) return 1;
+            return Mathf.CeilToInt((float)count / CardsPerPage);
+        }
+
+        private static int GetMaxPageStart(int count)
+        {
+            if (count <= 0) return 0;
+            return (GetDirectoryPageCount(count) - 1) * CardsPerPage;
+        }
+
+        private static int ClampPageStart(int value, int count)
+        {
+            if (count <= 0) return 0;
+            return Mathf.Clamp(value, 0, GetMaxPageStart(count));
         }
 
         private void NextProfile()
@@ -901,6 +1216,16 @@ namespace OfficeFlipOut.UI
         }
 
         // P5: format dislikes summary for directory cards
+        private static string FormatPersonalityQuote(string summary)
+        {
+            if (string.IsNullOrWhiteSpace(summary))
+            {
+                return "\u201CNo intel on personality yet.\u201D";
+            }
+
+            return "\u201C" + summary + "\u201D";
+        }
+
         private static string FormatDislikeSummary(IReadOnlyList<string> dislikes)
         {
             if (dislikes == null || dislikes.Count == 0)

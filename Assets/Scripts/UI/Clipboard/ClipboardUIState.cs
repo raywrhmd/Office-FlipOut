@@ -1,4 +1,5 @@
 using System;
+using OfficeFlipOut.Systems;
 
 namespace OfficeFlipOut.UI
 {
@@ -14,7 +15,7 @@ namespace OfficeFlipOut.UI
         public static bool IsOpen { get; private set; }
         public static ClipboardTab ActiveTab { get; private set; } = ClipboardTab.Directory;
 
-        public static bool ShouldBlockGameplayInput => IsOpen;
+        public static bool ShouldBlockGameplayInput => IsOpen || GameRuntimeState.ShouldBlockGameplayInput;
 
         public static event Action<bool> ClipboardOpenChanged;
         public static event Action<ClipboardTab> ClipboardTabChanged;

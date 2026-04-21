@@ -34,10 +34,10 @@ namespace OfficeFlipOut.Data
                     Role = "Coworker",
                     ColorIdentity = "Red",
                     PersonalitySummary = "Temperamental and easy to provoke. Great first target to learn sabotage flow.",
-                    SabotageHint = "Stack quick annoyances near his desk to trigger an early FLIP OUT.",
+                    SabotageHint = "Bring birthday cake near him and ruin his perfectly organized filing cabinet.",
                     DifficultyTier = EmployeeDifficultyTier.Intro,
-                    Likes = new List<string> { "Quiet workspace", "Personal desk order" },
-                    Dislikes = new List<string> { "Spilled drinks", "Microwave fish smell", "Stapler theft" },
+                    Likes = new List<string> { "Quiet workspace", "Perfectly organized filing cabinet" },
+                    Dislikes = new List<string> { "Spilled drinks", "Birthday cake", "Filing cabinet disorder" },
                     Schedule = new List<EmployeeScheduleSeed>
                     {
                         new EmployeeScheduleSeed { Label = "Desk Grind", Location = "Desk Row A", StartHour = 8f, EndHour = 11f },
