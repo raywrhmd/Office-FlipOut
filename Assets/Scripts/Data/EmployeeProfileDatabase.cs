@@ -54,6 +54,12 @@ namespace OfficeFlipOut.Data
             return null;
         }
 
+        public void SetProfiles(IList<EmployeeProfileData> newProfiles)
+        {
+            profiles = newProfiles != null ? new List<EmployeeProfileData>(newProfiles) : new List<EmployeeProfileData>();
+            runtimeProfiles.Clear();
+        }
+
         public IReadOnlyList<EmployeeProfileData> GetProfiles()
         {
             if (profiles != null && profiles.Count > 0)

@@ -8,7 +8,11 @@ public enum RageSignalEventType
     NoSignal = 3,
     MicrowaveFishItem = 4,
     KnockOver = 5,
-    BringObjectNear = 6
+    BringObjectNear = 6,
+    HitNpcWithProjectile = 7,
+    MakeLoudNoise = 8,
+    UnplugDevice = 9,
+    FinalBossSpillDrinkOnDesk = 10
 }
 
 public static class RageSignalIds
@@ -18,6 +22,9 @@ public static class RageSignalIds
     public const string StealObject = "steal_object";
     public const string KnockOver = "knock_over";
     public const string BringObjectNear = "bring_object_near";
+    public const string HitNpcWithProjectile = "hit_npc_with_projectile";
+    public const string MakeLoudNoise = "make_loud_noise";
+    public const string UnplugDevice = "unplug_device";
 }
 
 [DisallowMultipleComponent]
@@ -43,6 +50,11 @@ public class RageInteractionPropSignal : MonoBehaviour
     [SerializeField, Min(0.01f)] private float bringNearRequiredDistance = 1f;
     [SerializeField] private bool bringNearHorizontalDistanceOnly = true;
     [SerializeField] private bool bringNearTriggerOnlyOnce = true;
+
+    [Header("Loud Noise Trigger")]
+    [Tooltip("Only for MakeLoudNoise: Interact sends the signal only when the target NPC is within this radius.")]
+    [SerializeField, Min(0.01f)] private float loudNoiseRequiredDistance = 2.5f;
+    [SerializeField] private bool loudNoiseHorizontalDistanceOnly = true;
 
     [Header("Knock Over Interaction")]
     [SerializeField] private bool knockOverOnlyOnce = true;
@@ -246,6 +258,21 @@ public class RageInteractionPropSignal : MonoBehaviour
         TrySendSpecificSignal(RageSignalIds.StealObject, "SendStealObjectSignal() called");
     }
 
+    public void SendHitNpcWithProjectileSignal()
+    {
+        TrySendSpecificSignal(RageSignalIds.HitNpcWithProjectile, "SendHitNpcWithProjectileSignal() called");
+    }
+
+    public void SendMakeLoudNoiseSignal()
+    {
+        TrySendSpecificSignal(RageSignalIds.MakeLoudNoise, "SendMakeLoudNoiseSignal() called");
+    }
+
+    public void SendUnplugDeviceSignal()
+    {
+        TrySendSpecificSignal(RageSignalIds.UnplugDevice, "SendUnplugDeviceSignal() called");
+    }
+
     private void TrySendSignal()
     {
         TrySendSpecificSignal(ResolveSignalId(), "TrySendSignal() default path");
@@ -263,7 +290,9 @@ public class RageInteractionPropSignal : MonoBehaviour
 
     private void TrySendSpecificSignal(string resolvedSignalId, string sendReason)
     {
-        if (sendOnlyOnce && hasSent)
+        bool allowRepeatedFinalBossSpill = signalEventType == RageSignalEventType.FinalBossSpillDrinkOnDesk;
+
+        if (!allowRepeatedFinalBossSpill && sendOnlyOnce && hasSent)
         {
             return;
         }
@@ -305,13 +334,35 @@ public class RageInteractionPropSignal : MonoBehaviour
             return;
         }
 
+        if (signalEventType == RageSignalEventType.MakeLoudNoise)
+        {
+            float currentDistance;
+            if (!IsTargetNpcWithinDistance(loudNoiseRequiredDistance, loudNoiseHorizontalDistanceOnly, out currentDistance))
+            {
+                if (logSignalSendToConsole)
+                {
+                    Debug.Log(
+                        "[RageInteractionPropSignal] " + name +
+                        " did not send signal '" + resolvedSignalId +
+                        "' because target NPC is outside loud-noise radius (" +
+                        currentDistance.ToString("F2") + " > " + loudNoiseRequiredDistance.ToString("F2") + ").",
+                        this);
+                }
+
+                return;
+            }
+        }
+
         string resolvedTargetNpcId = ResolveTargetNpcId();
         RageSignalHub.RaiseSignal(resolvedSignalId, resolvedTargetNpcId);
         string targetInfo = string.IsNullOrWhiteSpace(resolvedTargetNpcId)
             ? "global broadcast"
             : "target npc id: " + resolvedTargetNpcId;
 
-        hasSent = true;
+        if (!allowRepeatedFinalBossSpill)
+        {
+            hasSent = true;
+        }
         lastSendTime = Time.time;
 
         if (logSignalSendToConsole)
@@ -330,6 +381,7 @@ public class RageInteractionPropSignal : MonoBehaviour
         switch (signalEventType)
         {
             case RageSignalEventType.SpillDrinkOnDesk:
+            case RageSignalEventType.FinalBossSpillDrinkOnDesk:
                 return RageSignalIds.SpillDrinkOnDesk;
             case RageSignalEventType.MicrowaveFish:
                 return RageSignalIds.MicrowaveFish;
@@ -339,6 +391,12 @@ public class RageInteractionPropSignal : MonoBehaviour
                 return RageSignalIds.KnockOver;
             case RageSignalEventType.BringObjectNear:
                 return RageSignalIds.BringObjectNear;
+            case RageSignalEventType.HitNpcWithProjectile:
+                return RageSignalIds.HitNpcWithProjectile;
+            case RageSignalEventType.MakeLoudNoise:
+                return RageSignalIds.MakeLoudNoise;
+            case RageSignalEventType.UnplugDevice:
+                return RageSignalIds.UnplugDevice;
             case RageSignalEventType.NoSignal:
             case RageSignalEventType.MicrowaveFishItem:
                 return string.Empty;
@@ -465,7 +523,8 @@ public class RageInteractionPropSignal : MonoBehaviour
             return;
         }
 
-        if (sendOnlyOnce && hasSent)
+        bool allowRepeatedFinalBossSpill = signalEventType == RageSignalEventType.FinalBossSpillDrinkOnDesk;
+        if (!allowRepeatedFinalBossSpill && sendOnlyOnce && hasSent)
         {
             SetHoverHintActive(false);
             return;
@@ -535,6 +594,26 @@ public class RageInteractionPropSignal : MonoBehaviour
     {
         return signalEventType == RageSignalEventType.StealObject ||
                signalEventType == RageSignalEventType.BringObjectNear;
+    }
+
+    private bool IsTargetNpcWithinDistance(float requiredDistance, bool horizontalOnly, out float currentDistance)
+    {
+        currentDistance = float.PositiveInfinity;
+        if (targetNpc == null)
+        {
+            return false;
+        }
+
+        Vector3 toTargetNpc = targetNpc.transform.position - transform.position;
+        if (horizontalOnly)
+        {
+            toTargetNpc.y = 0f;
+        }
+
+        float requiredDistanceSqr = requiredDistance * requiredDistance;
+        float distanceSqr = toTargetNpc.sqrMagnitude;
+        currentDistance = Mathf.Sqrt(distanceSqr);
+        return distanceSqr <= requiredDistanceSqr;
     }
 
     private Rigidbody ResolveKnockOverRigidbody(Collider hitCollider)

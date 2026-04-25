@@ -40,6 +40,9 @@ public class PhysicsGrab : MonoBehaviour
     public float coffeeSpillMinImpactSpeed = 1.2f;
     public bool logCoffeeSpillDebug = true;
 
+    [Header("Thrown Object Tracking")]
+    public bool logThrownObjectDebug = false;
+
     [Header("Coffee Spill Snap (Button Interaction)")]
     [Tooltip("When the player presses E on the coffee spill signal while holding coffee, lock it into this pose.")]
     public bool snapCoffeeIntoSpilledState = true;
@@ -177,7 +180,8 @@ public class PhysicsGrab : MonoBehaviour
         }
 
         // Coffee spill: allow interaction when holding coffee.
-        if (signal.SignalEventType == RageSignalEventType.SpillDrinkOnDesk)
+        if (signal.SignalEventType == RageSignalEventType.SpillDrinkOnDesk ||
+            signal.SignalEventType == RageSignalEventType.FinalBossSpillDrinkOnDesk)
         {
             if (!enableCoffeeSpillRage)
             {
@@ -232,6 +236,13 @@ public class PhysicsGrab : MonoBehaviour
             }
         }
 
+        if (signal.SignalEventType == RageSignalEventType.MakeLoudNoise ||
+            signal.SignalEventType == RageSignalEventType.UnplugDevice)
+        {
+            signal.Interact();
+            return true;
+        }
+
         return false;
     }
 
@@ -258,8 +269,11 @@ public class PhysicsGrab : MonoBehaviour
             : coffeeSpillSnapLocalPosition;
         Quaternion targetLocalRotation = Quaternion.Euler(coffeeSpillSnapLocalEulerAngles);
 
-        coffeeBody.linearVelocity = Vector3.zero;
-        coffeeBody.angularVelocity = Vector3.zero;
+        if (!coffeeBody.isKinematic)
+        {
+            coffeeBody.linearVelocity = Vector3.zero;
+            coffeeBody.angularVelocity = Vector3.zero;
+        }
         coffeeBody.useGravity = false;
         coffeeBody.isKinematic = true;
 
@@ -526,6 +540,22 @@ public class PhysicsGrab : MonoBehaviour
             logCoffeeSpillDebug);
     }
 
+    void ArmThrownObjectMarker(Rigidbody rb)
+    {
+        if (rb == null)
+        {
+            return;
+        }
+
+        ProjectileHitNpcRage projectileMarker = rb.GetComponent<ProjectileHitNpcRage>();
+        if (projectileMarker == null)
+        {
+            projectileMarker = rb.gameObject.AddComponent<ProjectileHitNpcRage>();
+        }
+
+        projectileMarker.Arm(logThrownObjectDebug);
+    }
+
     bool IsLockedInMicrowave(Rigidbody rb)
     {
         if (rb == null)
@@ -570,18 +600,18 @@ public class PhysicsGrab : MonoBehaviour
         heldObject.AddForce(cam.transform.forward * throwForce, ForceMode.Impulse);
         heldObject = null;
 
-        if (!allowThrownFishMicrowaveSnap || objectToThrow == null || !IsFishObject(objectToThrow))
+        if (allowThrownFishMicrowaveSnap && objectToThrow != null && IsFishObject(objectToThrow))
         {
-            return;
+            FishMicrowaveProjectile snapHelper = objectToThrow.GetComponent<FishMicrowaveProjectile>();
+            if (snapHelper == null)
+            {
+                snapHelper = objectToThrow.gameObject.AddComponent<FishMicrowaveProjectile>();
+            }
+
+            snapHelper.Arm(this, objectToThrow, thrownFishSnapDistance, thrownFishSnapMinSpeed, thrownFishSnapLifetime);
         }
 
-        FishMicrowaveProjectile snapHelper = objectToThrow.GetComponent<FishMicrowaveProjectile>();
-        if (snapHelper == null)
-        {
-            snapHelper = objectToThrow.gameObject.AddComponent<FishMicrowaveProjectile>();
-        }
-
-        snapHelper.Arm(this, objectToThrow, thrownFishSnapDistance, thrownFishSnapMinSpeed, thrownFishSnapLifetime);
+        ArmThrownObjectMarker(objectToThrow);
     }
 
     void OnGUI()
@@ -636,7 +666,8 @@ public class PhysicsGrab : MonoBehaviour
                 }
             }
             // Coffee spill: show interact only when holding coffee.
-            else if (signal.SignalEventType == RageSignalEventType.SpillDrinkOnDesk)
+            else if (signal.SignalEventType == RageSignalEventType.SpillDrinkOnDesk ||
+                     signal.SignalEventType == RageSignalEventType.FinalBossSpillDrinkOnDesk)
             {
                 Rigidbody coffeeRb = hit.collider.GetComponent<Rigidbody>();
                 bool canInteract =
@@ -653,6 +684,12 @@ public class PhysicsGrab : MonoBehaviour
             {
                 if (signal.SignalEventType == RageSignalEventType.KnockOver &&
                     signal.CanPerformKnockOver(hit.collider))
+                {
+                    return interactReticleColor;
+                }
+
+                if (signal.SignalEventType == RageSignalEventType.MakeLoudNoise ||
+                    signal.SignalEventType == RageSignalEventType.UnplugDevice)
                 {
                     return interactReticleColor;
                 }

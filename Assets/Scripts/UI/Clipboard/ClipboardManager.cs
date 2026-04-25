@@ -142,6 +142,11 @@ namespace OfficeFlipOut.UI
             if (database == null)
             {
                 database = Resources.Load<EmployeeProfileDatabase>("EmployeeProfileDatabase");
+                if (database == null)
+                {
+                    database = ScriptableObject.CreateInstance<EmployeeProfileDatabase>();
+                    database.hideFlags = HideFlags.DontSave;
+                }
 #if UNITY_EDITOR
                 if (database == null)
                 {

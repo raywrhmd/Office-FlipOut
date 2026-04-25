@@ -11,7 +11,9 @@ namespace OfficeFlipOut.UI
     [RequireComponent(typeof(UIDocument))]
     public class ClipboardUIToolkitManager : MonoBehaviour
     {
+        private const string SandraNpcId = "npc_1";
         private const string BrutusNpcId = "npc_2";
+        private const string TommyNpcId = "npc_3";
         private const int CardsPerPage = 3;
         private const int RuledLineCount = 20;
 
@@ -257,6 +259,11 @@ namespace OfficeFlipOut.UI
             if (database == null)
             {
                 database = Resources.Load<EmployeeProfileDatabase>("EmployeeProfileDatabase");
+                if (database == null)
+                {
+                    database = ScriptableObject.CreateInstance<EmployeeProfileDatabase>();
+                    database.hideFlags = HideFlags.DontSave;
+                }
 #if UNITY_EDITOR
                 if (database == null)
                 {
@@ -742,7 +749,7 @@ namespace OfficeFlipOut.UI
             card.locationLabel.text = "@ " + GetCurrentLocation(profile);
             UpdateCardStatusAndRageFace(ref card, profile.NpcId);
             SetVisible(card.lockBadge, false);
-            SetPortraitSprite(card.portrait, profile.Portrait);
+            SetPortraitSprite(card.portrait, ResolvePortrait(profile));
             card.openButton.SetEnabled(true);
         }
 
@@ -847,7 +854,7 @@ namespace OfficeFlipOut.UI
             SetVisible(detailLockBanner, false);
 
             UpdateDetailStatusBadge(profile.NpcId);
-            SetPortraitSprite(detailPortrait, profile.Portrait);
+            SetPortraitSprite(detailPortrait, ResolvePortrait(profile));
 
             detailLikesHeader.text = "LIKES";
             detailLikes.text = BuildBulletList(profile.Likes);
@@ -863,6 +870,21 @@ namespace OfficeFlipOut.UI
             detailLocation.text = "Currently @ " + GetCurrentLocation(profile);
             detailScheduleHeader.text = "DAILY ROUTINE";
             detailSchedule.text = BuildScheduleText(profile.ScheduleBlocks);
+        }
+
+        private Sprite ResolvePortrait(EmployeeProfileData profile)
+        {
+            if (profile == null)
+            {
+                return null;
+            }
+
+            if (profile.Portrait != null)
+            {
+                return profile.Portrait;
+            }
+
+            return progressTracker != null ? progressTracker.GetNpcPortraitSprite(profile.NpcId) : null;
         }
 
         private void ShowDetailLocked()
@@ -1004,7 +1026,24 @@ namespace OfficeFlipOut.UI
                     taskRow.AddToClassList("npc-task-row");
 
                     int taskCount = Mathf.Clamp(snap.requiredSignals, 1, snap.npcId == BrutusNpcId ? 2 : 3);
-                    if (snap.npcId == BrutusNpcId)
+                    if (snap.npcId == SandraNpcId)
+                    {
+                        if (taskCount >= 1)
+                        {
+                            AddTaskItem(taskRow, "Spill drink near desk", snap.spilledDrink);
+                        }
+
+                        if (taskCount >= 2)
+                        {
+                            AddTaskItem(taskRow, "Microwave fish nearby", snap.microwavedFish);
+                        }
+
+                        if (taskCount >= 3)
+                        {
+                            AddTaskItem(taskRow, "Steal desk prop", snap.tookStapler);
+                        }
+                    }
+                    else if (snap.npcId == BrutusNpcId)
                     {
                         if (taskCount >= 1)
                         {
@@ -1014,6 +1053,23 @@ namespace OfficeFlipOut.UI
                         if (taskCount >= 2)
                         {
                             AddTaskItem(taskRow, "Knock over filing cabinet", snap.tookStapler);
+                        }
+                    }
+                    else if (snap.npcId == TommyNpcId)
+                    {
+                        if (taskCount >= 1)
+                        {
+                            AddTaskItem(taskRow, "Hit with projectile", snap.spilledDrink);
+                        }
+
+                        if (taskCount >= 2)
+                        {
+                            AddTaskItem(taskRow, "Make loud noise nearby", snap.microwavedFish);
+                        }
+
+                        if (taskCount >= 3)
+                        {
+                            AddTaskItem(taskRow, "Unplug device", snap.tookStapler);
                         }
                     }
                     else

@@ -83,7 +83,7 @@ namespace OfficeFlipOut.UI
                 int idx = WrapIndex(pageStart + i, count);
                 EmployeeProfileData profile = database.GetProfileAt(idx);
                 if (profile == null) { ShowFallback(card); continue; }
-                if (IsLocked(profile)) { ShowLocked(card); continue; }
+                if (IsLocked(profile)) { ShowLocked(card, profile); continue; }
 
                 ShowProfile(card, profile, idx);
             }
@@ -296,9 +296,10 @@ namespace OfficeFlipOut.UI
             UpdateStatusAndRageFace(card, profile.NpcId);
             card.lockRoot.SetActive(false);
 
-            if (profile.Portrait != null)
+            Sprite portraitSprite = ResolvePortrait(profile);
+            if (portraitSprite != null)
             {
-                card.portrait.sprite = profile.Portrait;
+                card.portrait.sprite = portraitSprite;
                 card.portrait.color = Color.white;
             }
             else
@@ -338,22 +339,63 @@ namespace OfficeFlipOut.UI
             card.rageFaceImage.sprite = face;
         }
 
-        private void ShowLocked(StaffCard card)
+        private void ShowLocked(StaffCard card, EmployeeProfileData profile)
         {
-            card.nameLabel.text = "[ CLASSIFIED ]";
-            card.roleLabel.text = "???";
-            card.colorStrip.color = new Color32(42, 42, 48, 255);
-            card.difficultyLabel.text = "BOSS";
-            card.difficultyLabel.color = UIFactory.GetDifficultyColor(EmployeeDifficultyTier.Final);
-            card.dislikesLabel.text = "Hates: ???";
-            card.locationLabel.text = "@ ???";
+            bool showProfile = profile != null;
+            card.nameLabel.text = showProfile && !string.IsNullOrWhiteSpace(profile.DisplayName)
+                ? profile.DisplayName
+                : "[ CLASSIFIED ]";
+            card.roleLabel.text = showProfile && !string.IsNullOrWhiteSpace(profile.Role)
+                ? profile.Role
+                : "???";
+            card.colorStrip.color = showProfile
+                ? UIFactory.GetIdentityColor(profile.ColorIdentity)
+                : new Color32(42, 42, 48, 255);
+            card.difficultyLabel.text = showProfile
+                ? UIFactory.GetDifficultyLabel(profile.DifficultyTier)
+                : "BOSS";
+            card.difficultyLabel.color = showProfile
+                ? UIFactory.GetDifficultyColor(profile.DifficultyTier)
+                : UIFactory.GetDifficultyColor(EmployeeDifficultyTier.Final);
+            card.dislikesLabel.text = showProfile
+                ? FormatDislikeSummary(profile.Dislikes)
+                : "Hates: ???";
+            card.locationLabel.text = showProfile
+                ? "LOCKED - Flip all coworkers to unlock"
+                : "@ ???";
             card.lockRoot.SetActive(true);
-            card.lockLabel.text = "LOCKED";
+            card.lockLabel.text = showProfile && profile.RequiresAllCoworkersFlipped
+                ? "LOCKED - FINAL OBSTACLE"
+                : "LOCKED";
             card.statusBadge.SetActive(false);
             card.rageFaceRoot.SetActive(false);
-            card.portrait.sprite = null;
-            card.portrait.color = new Color32(55, 50, 46, 255);
+            Sprite portraitSprite = showProfile ? ResolvePortrait(profile) : null;
+            if (portraitSprite != null)
+            {
+                card.portrait.sprite = portraitSprite;
+                card.portrait.color = Color.white;
+            }
+            else
+            {
+                card.portrait.sprite = null;
+                card.portrait.color = new Color32(55, 50, 46, 255);
+            }
             card.openButton.interactable = false;
+        }
+
+        private Sprite ResolvePortrait(EmployeeProfileData profile)
+        {
+            if (profile == null)
+            {
+                return null;
+            }
+
+            if (profile.Portrait != null)
+            {
+                return profile.Portrait;
+            }
+
+            return progressTracker != null ? progressTracker.GetNpcPortraitSprite(profile.NpcId) : null;
         }
 
         private void ShowFallback(StaffCard card)

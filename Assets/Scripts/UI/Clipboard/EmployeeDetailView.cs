@@ -83,7 +83,7 @@ namespace OfficeFlipOut.UI
             BuildIfNeeded();
             EmployeeProfileData profile = database != null ? database.GetProfileAt(selectedIndex) : null;
             if (profile == null) { ShowEmpty(); return; }
-            if (IsLocked(profile)) { ShowLocked(); return; }
+            if (IsLocked(profile)) { ShowLocked(profile); return; }
             ShowFull(profile);
         }
 
@@ -282,11 +282,13 @@ namespace OfficeFlipOut.UI
             roleLabel.text = profile.Role + "  /  " + profile.ColorIdentity;
             difficultyTag.text = UIFactory.GetDifficultyLabel(profile.DifficultyTier);
             difficultyTag.color = UIFactory.GetDifficultyColor(profile.DifficultyTier);
-            personalityLabel.text = "\u201CPlaceholder\u201D";
+            personalityLabel.text = string.IsNullOrWhiteSpace(profile.PersonalitySummary)
+                ? "\u201CMaintains a very normal office presence.\u201D"
+                : "\u201C" + profile.PersonalitySummary + "\u201D";
             lockBanner.SetActive(false);
 
             UpdateStatusBadge(profile.NpcId);
-            SetPortrait(profile.Portrait);
+            SetPortrait(ResolvePortrait(profile));
 
             likesHeader.text = "LIKES";
             likesLabel.text = BuildBulletList(profile.Likes);
@@ -305,32 +307,48 @@ namespace OfficeFlipOut.UI
             backButton.gameObject.SetActive(true);
         }
 
-        private void ShowLocked()
+        private void ShowLocked(EmployeeProfileData profile)
         {
-            colorBanner.color = new Color32(42, 42, 48, 255);
-            folderTab.color = new Color32(42, 42, 48, 255);
+            Color32 lockedColor = new Color32(42, 42, 48, 255);
+            colorBanner.color = profile != null ? UIFactory.GetIdentityColor(profile.ColorIdentity) : lockedColor;
+            folderTab.color = profile != null ? UIFactory.GetIdentityColor(profile.ColorIdentity) : lockedColor;
             folderTab.gameObject.SetActive(true);
 
-            nameLabel.text = "[ CLASSIFIED ]";
-            roleLabel.text = "Final Obstacle";
-            difficultyTag.text = "BOSS";
-            difficultyTag.color = UIFactory.GetDifficultyColor(EmployeeDifficultyTier.Final);
-            personalityLabel.text = "\u201COnly destabilizes after everyone else has flipped.\u201D";
+            bool showProfile = profile != null;
+            nameLabel.text = showProfile && !string.IsNullOrWhiteSpace(profile.DisplayName)
+                ? profile.DisplayName
+                : "[ CLASSIFIED ]";
+            roleLabel.text = showProfile && !string.IsNullOrWhiteSpace(profile.Role)
+                ? profile.Role
+                : "Final Obstacle";
+            difficultyTag.text = showProfile
+                ? UIFactory.GetDifficultyLabel(profile.DifficultyTier)
+                : "BOSS";
+            difficultyTag.color = showProfile
+                ? UIFactory.GetDifficultyColor(profile.DifficultyTier)
+                : UIFactory.GetDifficultyColor(EmployeeDifficultyTier.Final);
+            personalityLabel.text = showProfile && !string.IsNullOrWhiteSpace(profile.PersonalitySummary)
+                ? "\u201C" + profile.PersonalitySummary + "\u201D"
+                : "\u201COnly destabilizes after everyone else has flipped.\u201D";
             lockBanner.SetActive(true);
-            lockText.text = "DOSSIER LOCKED - Flip all coworkers to gain access";
+            lockText.text = showProfile && profile.RequiresAllCoworkersFlipped
+                ? "DOSSIER LOCKED - Flip all coworkers to gain access"
+                : "DOSSIER LOCKED - Flip all coworkers to gain access";
             statusRow.SetActive(false);
-            SetPortrait(null);
+            SetPortrait(showProfile ? ResolvePortrait(profile) : null);
 
             likesHeader.text = "LIKES";
-            likesLabel.text = "  ???";
+            likesLabel.text = showProfile ? BuildBulletList(profile.Likes) : "  ???";
             dislikesHeader.text = "DISLIKES";
-            dislikesLabel.text = "  ???";
-            dislikesUnderline.gameObject.SetActive(false);
-            hintLabel.text = "Intel: complete all coworker FLIP OUTs to unlock.";
+            dislikesLabel.text = showProfile ? BuildBulletList(profile.Dislikes) : "  ???";
+            dislikesUnderline.gameObject.SetActive(showProfile && profile.Dislikes != null && profile.Dislikes.Count > 0);
+            hintLabel.text = showProfile && !string.IsNullOrWhiteSpace(profile.SabotageHint)
+                ? "Intel: " + profile.SabotageHint
+                : "Intel: complete all coworker FLIP OUTs to unlock.";
 
-            locationLabel.text = "Currently @ ???";
+            locationLabel.text = showProfile ? "Currently @ LOCKED" : "Currently @ ???";
             scheduleHeader.text = "DAILY ROUTINE";
-            scheduleLabel.text = "  Schedule classified.";
+            scheduleLabel.text = showProfile ? BuildScheduleText(profile.ScheduleBlocks) : "  Schedule classified.";
             backButton.gameObject.SetActive(true);
         }
 
@@ -381,6 +399,21 @@ namespace OfficeFlipOut.UI
         {
             portrait.sprite = sprite;
             portrait.color = sprite != null ? Color.white : UIFactory.PortraitPlaceholder;
+        }
+
+        private Sprite ResolvePortrait(EmployeeProfileData profile)
+        {
+            if (profile == null)
+            {
+                return null;
+            }
+
+            if (profile.Portrait != null)
+            {
+                return profile.Portrait;
+            }
+
+            return progressTracker != null ? progressTracker.GetNpcPortraitSprite(profile.NpcId) : null;
         }
 
         // ---- Helpers ----

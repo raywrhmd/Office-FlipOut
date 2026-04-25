@@ -119,7 +119,6 @@ namespace OfficeFlipOut.Data
             displayName = seed.DisplayName;
             role = seed.Role;
             colorIdentity = seed.ColorIdentity;
-            portrait = null;
             personalitySummary = seed.PersonalitySummary;
             sabotageHint = seed.SabotageHint;
             difficultyTier = seed.DifficultyTier;

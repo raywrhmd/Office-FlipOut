@@ -7,7 +7,10 @@ namespace OfficeFlipOut.Systems
 {
     public class ProgressTracker : MonoBehaviour
     {
+        private const string SandraNpcId = "npc_1";
         private const string BrutusNpcId = "npc_2";
+        private const string TommyNpcId = "npc_3";
+        private const string BossNpcId = "boss_1";
 
         [Serializable]
         public class EmployeeProgressSnapshot
@@ -26,6 +29,11 @@ namespace OfficeFlipOut.Systems
             {
                 get
                 {
+                    if (npcId == BossNpcId)
+                    {
+                        return 1;
+                    }
+
                     if (npcId == BrutusNpcId)
                     {
                         return Mathf.Clamp(requiredSignals, 1, 2);
@@ -39,6 +47,11 @@ namespace OfficeFlipOut.Systems
             {
                 get
                 {
+                    if (npcId == BossNpcId)
+                    {
+                        return isFlippedOut ? 1 : 0;
+                    }
+
                     int completed = 0;
 
                     if (npcId == BrutusNpcId)
@@ -235,6 +248,54 @@ namespace OfficeFlipOut.Systems
                 }
             }
 
+            if (target.npcId == SandraNpcId)
+            {
+                if (target.TotalTasksCount >= 1 && !target.spilledDrink)
+                {
+                    nextSuggestedAction = "Spill a drink near her desk.";
+                    return "Raise " + target.displayName + " rage by spilling a drink near her desk.";
+                }
+
+                if (target.TotalTasksCount >= 2 && !target.microwavedFish)
+                {
+                    nextSuggestedAction = "Microwave fish while she is nearby.";
+                    return "Raise " + target.displayName + " rage with microwave fish.";
+                }
+
+                if (target.TotalTasksCount >= 3 && !target.tookStapler)
+                {
+                    nextSuggestedAction = "Steal one of her desk props.";
+                    return "Raise " + target.displayName + " rage by stealing a desk prop.";
+                }
+            }
+
+            if (target.npcId == TommyNpcId)
+            {
+                if (target.TotalTasksCount >= 1 && !target.spilledDrink)
+                {
+                    nextSuggestedAction = "Hit him with a paper ball, sticky hand, or Nerf dart.";
+                    return "Raise " + target.displayName + " rage by hitting him with a projectile.";
+                }
+
+                if (target.TotalTasksCount >= 2 && !target.microwavedFish)
+                {
+                    nextSuggestedAction = "Turn on a loud device near his chill zone.";
+                    return "Raise " + target.displayName + " rage with loud nearby noise.";
+                }
+
+                if (target.TotalTasksCount >= 3 && !target.tookStapler)
+                {
+                    nextSuggestedAction = "Unplug his fan, monitor, or lava lamp.";
+                    return "Raise " + target.displayName + " rage by unplugging one of his devices.";
+                }
+            }
+
+            if (target.npcId == BossNpcId)
+            {
+                nextSuggestedAction = "Flip every coworker first.";
+                return "Da Boss stays locked until every coworker has FLIP OUT.";
+            }
+
             if (target.TotalTasksCount >= 1 && !target.spilledDrink)
             {
                 nextSuggestedAction = "Spill a drink near their desk area.";
@@ -255,6 +316,36 @@ namespace OfficeFlipOut.Systems
 
             nextSuggestedAction = "Push their rage to full with remaining interactions.";
             return "Finish forcing " + target.displayName + " to FLIP OUT.";
+        }
+
+        public Sprite GetNpcPortraitSprite(string npcId)
+        {
+            if (string.IsNullOrWhiteSpace(npcId))
+            {
+                return null;
+            }
+
+            if (autoFindRageMeters && (trackedMeters == null || trackedMeters.Count == 0))
+            {
+                RebuildTrackedMeters();
+            }
+
+            for (int i = 0; i < trackedMeters.Count; i++)
+            {
+                Rage_Meter meter = trackedMeters[i];
+                if (meter == null)
+                {
+                    continue;
+                }
+
+                string meterNpcId = string.IsNullOrWhiteSpace(meter.NpcSignalId) ? meter.name : meter.NpcSignalId;
+                if (meterNpcId == npcId)
+                {
+                    return meter.ClipboardPortraitSprite;
+                }
+            }
+
+            return null;
         }
 
         private EmployeeProgressSnapshot FindFirstIncompleteSnapshot(string focusNpcId)
@@ -310,14 +401,21 @@ namespace OfficeFlipOut.Systems
                 snapshot.currentRage = meter.CurrentRage;
                 snapshot.requiredSignals = meter.RequiredSignals;
                 snapshot.isFlippedOut = meter.IsFlippedOut;
-                snapshot.spilledDrink = meter.HasReceivedSignal(RageSignalIds.SpillDrinkOnDesk);
                 if (snapshot.npcId == BrutusNpcId)
                 {
+                    snapshot.spilledDrink = meter.HasReceivedSignal(RageSignalIds.SpillDrinkOnDesk);
                     snapshot.microwavedFish = meter.HasReceivedSignal(RageSignalIds.BringObjectNear);
                     snapshot.tookStapler = meter.HasReceivedSignal(RageSignalIds.KnockOver);
                 }
+                else if (snapshot.npcId == TommyNpcId)
+                {
+                    snapshot.spilledDrink = meter.HasReceivedSignal(RageSignalIds.HitNpcWithProjectile);
+                    snapshot.microwavedFish = meter.HasReceivedSignal(RageSignalIds.MakeLoudNoise);
+                    snapshot.tookStapler = meter.HasReceivedSignal(RageSignalIds.UnplugDevice);
+                }
                 else
                 {
+                    snapshot.spilledDrink = meter.HasReceivedSignal(RageSignalIds.SpillDrinkOnDesk);
                     snapshot.microwavedFish = meter.HasReceivedSignal(RageSignalIds.MicrowaveFish);
                     snapshot.tookStapler = meter.HasReceivedSignal(RageSignalIds.StealObject);
                 }

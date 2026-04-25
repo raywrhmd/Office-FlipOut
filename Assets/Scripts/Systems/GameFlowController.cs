@@ -106,11 +106,14 @@ namespace OfficeFlipOut.Systems
 
         [Header("Win Condition")]
         [SerializeField] private bool autoWinWhenAllCoworkersFlipped = true;
+        [SerializeField] private bool autoWinWhenFinalBossFlipsOut = true;
+        [SerializeField] private string finalBossNpcSignalId = "boss_1";
 
         [Header("Overlay")]
         [SerializeField] private GUISkin guiSkin;
 
         private ProgressTracker progressTracker;
+        private Rage_Meter finalBossMeter;
         private Rect overlayRect = new Rect(0f, 0f, 580f, 320f);
         private GUIStyle pauseTitleStyle;
         private GUIStyle pauseBodyStyle;
@@ -122,12 +125,19 @@ namespace OfficeFlipOut.Systems
             {
                 progressTracker = new GameObject("ProgressTracker").AddComponent<ProgressTracker>();
             }
+
+            TryBindFinalBossMeter();
             GameRuntimeState.ResetSession();
             GameRuntimeState.SetMainMenuOpen(true);
         }
 
         private void OnDisable()
         {
+            if (finalBossMeter != null)
+            {
+                finalBossMeter.FlippedOut -= HandleFinalBossFlippedOut;
+            }
+
             GameRuntimeState.ResetSession();
         }
 
@@ -143,10 +153,73 @@ namespace OfficeFlipOut.Systems
                 return;
             }
 
-            if (autoWinWhenAllCoworkersFlipped && !GameRuntimeState.IsWin && AreAllCoworkersFlipped())
+            if (autoWinWhenFinalBossFlipsOut && !GameRuntimeState.IsWin)
+            {
+                if (finalBossMeter == null)
+                {
+                    TryBindFinalBossMeter();
+                }
+                else if (finalBossMeter.IsFlippedOut)
+                {
+                    TriggerWin();
+                    return;
+                }
+            }
+
+            if (!autoWinWhenFinalBossFlipsOut &&
+                autoWinWhenAllCoworkersFlipped &&
+                !GameRuntimeState.IsWin &&
+                AreAllCoworkersFlipped())
             {
                 TriggerWin();
             }
+        }
+
+        private void TryBindFinalBossMeter()
+        {
+            if (string.IsNullOrWhiteSpace(finalBossNpcSignalId))
+            {
+                return;
+            }
+
+            Rage_Meter[] meters = FindObjectsByType<Rage_Meter>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            for (int i = 0; i < meters.Length; i++)
+            {
+                Rage_Meter meter = meters[i];
+                if (meter == null || meter.NpcSignalId != finalBossNpcSignalId)
+                {
+                    continue;
+                }
+
+                if (finalBossMeter == meter)
+                {
+                    return;
+                }
+
+                if (finalBossMeter != null)
+                {
+                    finalBossMeter.FlippedOut -= HandleFinalBossFlippedOut;
+                }
+
+                finalBossMeter = meter;
+                finalBossMeter.FlippedOut += HandleFinalBossFlippedOut;
+                return;
+            }
+        }
+
+        private void HandleFinalBossFlippedOut(Rage_Meter meter)
+        {
+            if (!autoWinWhenFinalBossFlipsOut || meter == null)
+            {
+                return;
+            }
+
+            if (GameRuntimeState.IsWin || GameRuntimeState.IsMainMenuOpen)
+            {
+                return;
+            }
+
+            TriggerWin();
         }
 
         private bool AreAllCoworkersFlipped()
@@ -223,23 +296,17 @@ namespace OfficeFlipOut.Systems
             GUILayout.BeginArea(overlayRect, GUI.skin.window);
             GUILayout.Space(14f);
 
-            string title = "You Made Everyone Flip Out";
-            string subtitle = "The whole office lost it on your watch. Congratulations on your job security.";
+            string title = "You Win";
+            string subtitle = "The boss flipped out. Office chaos complete.";
 
             GUILayout.Label(title, pauseTitleStyle);
             GUILayout.Space(10f);
             GUILayout.Label(subtitle, pauseBodyStyle);
             GUILayout.Space(22f);
 
-            if (GUILayout.Button("Restart Level", GUILayout.Height(42f)))
+            if (GUILayout.Button("Restart Game", GUILayout.Height(42f)))
             {
                 RestartCurrentScene();
-            }
-            GUILayout.Space(10f);
-
-            if (GUILayout.Button("Quit Game", GUILayout.Height(42f)))
-            {
-                QuitGame();
             }
 
             GUILayout.EndArea();

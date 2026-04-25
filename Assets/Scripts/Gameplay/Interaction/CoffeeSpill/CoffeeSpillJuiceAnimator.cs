@@ -25,15 +25,9 @@ public class CoffeeSpillJuiceAnimator : MonoBehaviour
     [SerializeField, Min(1f)] private float cameraShakeFrequency = 34f;
 
     private Coroutine spillRoutine;
-    private bool hasPlayed;
 
     public bool TryPlaySpill(Vector3 targetLocalPosition, Quaternion targetLocalRotation, Transform cameraTransform)
     {
-        if (hasPlayed)
-        {
-            return false;
-        }
-
         if (spillRoutine != null)
         {
             StopCoroutine(spillRoutine);
@@ -46,8 +40,6 @@ public class CoffeeSpillJuiceAnimator : MonoBehaviour
 
     private IEnumerator PlaySpillRoutine(Vector3 targetLocalPosition, Quaternion targetLocalRotation, Transform cameraTransform)
     {
-        hasPlayed = true;
-
         Quaternion startLocalRotation = transform.localRotation;
         transform.localPosition = targetLocalPosition;
 

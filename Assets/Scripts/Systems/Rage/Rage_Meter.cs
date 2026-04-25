@@ -20,6 +20,13 @@ public class Rage_Meter : MonoBehaviour
     [Tooltip("When true (e.g. Da Boss), sabotage signals are ignored until all other NPC meters are flipped.")]
     [SerializeField] private bool requireAllOtherNpcsFlippedBeforeAcceptingSignals;
 
+    [Header("Projectile Hit Rage")]
+    [Tooltip("When enabled, this NPC tracks collisions from player-thrown objects and grants the HitNpcWithProjectile signal after enough hits.")]
+    [SerializeField] private bool enableProjectileHitRage;
+    [SerializeField, Min(1)] private int projectileHitsRequiredForSignal = 3;
+    [SerializeField, Min(0f)] private float projectileHitMinImpactSpeed = 1.25f;
+    [SerializeField] private bool logProjectileHitDebug = true;
+
     [Header("Flip Out Trigger")]
     [SerializeField] private MonoBehaviour flipOutReceiver;
     [SerializeField] private string flipOutMethodName = "FlipOut";
@@ -87,9 +94,34 @@ public class Rage_Meter : MonoBehaviour
         }
     }
 
+    public Sprite ClipboardPortraitSprite
+    {
+        get
+        {
+            if (npcCalmSprite != null)
+            {
+                return npcCalmSprite;
+            }
+
+            if (npcBodyRenderer != null && npcBodyRenderer.sprite != null)
+            {
+                return npcBodyRenderer.sprite;
+            }
+
+            if (npcAngrySprite != null)
+            {
+                return npcAngrySprite;
+            }
+
+            return npcFlipOutBodySprite;
+        }
+    }
+
     private readonly HashSet<string> receivedSignalIds = new HashSet<string>();
+    private readonly HashSet<int> countedProjectileObjectIds = new HashSet<int>();
 
     private int currentRage;
+    private int projectileHitCount;
     private bool isFlippedOut;
     private bool isFlipOutSequenceRunning;
     private AudioListener temporarilyDisabledSourceAudioListener;
@@ -164,6 +196,83 @@ public class Rage_Meter : MonoBehaviour
         {
             DebugResetRage();
         }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        TryHandleProjectileHit(collision);
+    }
+
+    public bool RegisterProjectileHit(ProjectileHitNpcRage projectile, Collision collision)
+    {
+        if (!enableProjectileHitRage || projectile == null || collision == null)
+        {
+            return false;
+        }
+
+        if (isFlippedOut || isFlipOutSequenceRunning)
+        {
+            return false;
+        }
+
+        if (HasReceivedSignal(RageSignalIds.HitNpcWithProjectile))
+        {
+            return true;
+        }
+
+        float impactSpeed = collision.relativeVelocity.magnitude;
+        if (impactSpeed < projectileHitMinImpactSpeed)
+        {
+            if (logProjectileHitDebug)
+            {
+                Debug.Log(
+                    "[Rage_Meter] Ignored low-impact projectile on " + name +
+                    " (" + impactSpeed.ToString("F2") + " < " + projectileHitMinImpactSpeed.ToString("F2") + ").",
+                    this);
+            }
+
+            return false;
+        }
+
+        int projectileObjectId = projectile.GetObjectInstanceId();
+        if (!countedProjectileObjectIds.Add(projectileObjectId))
+        {
+            if (logProjectileHitDebug)
+            {
+                Debug.Log(
+                    "[Rage_Meter] Ignored duplicate projectile object on " + name + ".",
+                    this);
+            }
+
+            return false;
+        }
+
+        projectileHitCount++;
+
+        if (logProjectileHitDebug)
+        {
+            Debug.Log(
+                "[Rage_Meter] " + name +
+                " projectile hits: " + projectileHitCount + " / " + projectileHitsRequiredForSignal +
+                " after hit by '" + projectile.name + "'.",
+                this);
+        }
+
+        if (projectileHitCount < projectileHitsRequiredForSignal)
+        {
+            return true;
+        }
+
+        if (logProjectileHitDebug)
+        {
+            Debug.Log(
+                "[Rage_Meter] " + name +
+                " reached projectile threshold and will receive signal '" + RageSignalIds.HitNpcWithProjectile + "'.",
+                this);
+        }
+
+        AddSignal(RageSignalIds.HitNpcWithProjectile);
+        return true;
     }
 
     private bool IsDebugKeyPressed(KeyCode keyCode)
@@ -250,6 +359,11 @@ public class Rage_Meter : MonoBehaviour
             return;
         }
 
+        if (signalId == RageSignalIds.HitNpcWithProjectile)
+        {
+            projectileHitCount = Mathf.Max(projectileHitCount, projectileHitsRequiredForSignal);
+        }
+
         currentRage = Mathf.Min(currentRage + 1, requiredSignals);
         RefreshNpcBodySprite();
         RefreshRageFaceSprite();
@@ -295,9 +409,11 @@ public class Rage_Meter : MonoBehaviour
     public void ResetRage()
     {
         currentRage = 0;
+        projectileHitCount = 0;
         isFlippedOut = false;
         isFlipOutSequenceRunning = false;
         receivedSignalIds.Clear();
+        countedProjectileObjectIds.Clear();
         GameRuntimeState.SetCinematicInputLocked(false);
         RefreshNpcBodySprite();
         RefreshRageFaceSprite();
@@ -568,6 +684,58 @@ public class Rage_Meter : MonoBehaviour
         AddSignal(signalId);
     }
 
+    private void TryHandleProjectileHit(Collision collision)
+    {
+        if (!enableProjectileHitRage || isFlippedOut || isFlipOutSequenceRunning || collision == null)
+        {
+            return;
+        }
+
+        ProjectileHitNpcRage thrownMarker = ResolveThrownMarker(collision);
+        if (thrownMarker == null)
+        {
+            return;
+        }
+
+        if (thrownMarker.HasBeenConsumedByNpc)
+        {
+            return;
+        }
+
+        if (RegisterProjectileHit(thrownMarker, collision))
+        {
+            thrownMarker.MarkConsumedByNpc();
+        }
+    }
+
+    private static ProjectileHitNpcRage ResolveThrownMarker(Collision collision)
+    {
+        if (collision == null)
+        {
+            return null;
+        }
+
+        if (collision.rigidbody != null)
+        {
+            ProjectileHitNpcRage onRigidbody = collision.rigidbody.GetComponent<ProjectileHitNpcRage>();
+            if (onRigidbody != null)
+            {
+                return onRigidbody;
+            }
+        }
+
+        if (collision.collider != null)
+        {
+            ProjectileHitNpcRage onCollider = collision.collider.GetComponentInParent<ProjectileHitNpcRage>();
+            if (onCollider != null)
+            {
+                return onCollider;
+            }
+        }
+
+        return null;
+    }
+
     private void AutoAssignVisualReferences()
     {
         if (npcBodyRenderer == null)
@@ -757,6 +925,13 @@ public class Rage_Meter : MonoBehaviour
         {
             requiredSignals = 1;
         }
+
+        if (projectileHitsRequiredForSignal < 1)
+        {
+            projectileHitsRequiredForSignal = 1;
+        }
+
+        projectileHitMinImpactSpeed = Mathf.Max(0f, projectileHitMinImpactSpeed);
 
         rageFaceVerticalOffset = Mathf.Max(0f, rageFaceVerticalOffset);
         currentRage = Mathf.Clamp(currentRage, 0, requiredSignals);
