@@ -98,6 +98,7 @@ public class RageInteractionPropSignal : MonoBehaviour
         originPosition = transform.position;
         CacheLockReferences();
         CacheMainCamera();
+        EnsureRespawnSafetyForImportantProp();
     }
 
     private void Update()
@@ -420,6 +421,23 @@ public class RageInteractionPropSignal : MonoBehaviour
     {
         originPosition = transform.position;
         hasTriggeredDistanceSignal = false;
+    }
+
+    private void EnsureRespawnSafetyForImportantProp()
+    {
+        if (!TryGetComponent<Rigidbody>(out _))
+        {
+            return;
+        }
+
+        PropFloorDetection floorDetection = GetComponent<PropFloorDetection>();
+        if (floorDetection == null)
+        {
+            floorDetection = gameObject.AddComponent<PropFloorDetection>();
+        }
+
+        floorDetection.SetSpawnPoint(transform.position, transform.rotation);
+        floorDetection.EnableSafeBoundsRespawn(true);
     }
 
     private void CacheLockReferences()

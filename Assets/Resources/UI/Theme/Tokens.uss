@@ -1,0 +1,172 @@
+/* ===================================================================
+   Office Flip Out - Design Tokens
+   Single source of truth for color, spacing, type, and shadow values.
+   Reference these via var(--token-name) in component stylesheets.
+   Tokens live on :root so they cascade across every UIDocument that
+   includes this stylesheet.
+   =================================================================== */
+
+:root {
+    /* ---- Paper / Ink palette (clipboard aesthetic) ---- */
+    --color-paper:           rgb(248, 244, 235);
+    --color-paper-card:      rgb(252, 249, 240);
+    --color-paper-tint:      rgba(255, 255, 255, 0.42);
+    --color-paper-tint-soft: rgba(255, 255, 255, 0.55);
+
+    --color-ink:             rgb(38, 28, 18);
+    --color-ink-strong:      rgb(40, 32, 22);
+    --color-ink-medium:      rgb(68, 54, 40);
+    --color-ink-muted:       rgb(110, 95, 75);
+    --color-ink-subtle:      rgb(118, 108, 96);
+
+    --color-handwritten:     rgb(30, 40, 90);
+    --color-handwritten-2:   rgb(24, 36, 92);
+    --color-red-pen:         rgba(200, 45, 35, 0.706);
+
+    /* ---- Board / wood / leather (clipboard back) ---- */
+    --color-board:           rgb(130, 92, 55);
+    --color-board-face:      rgb(162, 118, 74);
+    --color-board-trim:      rgb(112, 86, 56);
+
+    /* ---- Identity (NPC color strip) ---- */
+    --color-id-default:      rgb(208, 202, 192);
+    --color-id-locked:       rgb(42, 42, 48);
+
+    /* ---- Status / rage palette ---- */
+    --color-status-active:   rgb(68, 135, 72);
+    --color-status-flipped:  rgb(178, 52, 38);
+    --color-status-locked:   rgb(80, 75, 70);
+    --color-rage-low:        rgb(215, 175, 55);
+    --color-rage-high:       rgb(195, 55, 40);
+
+    /* Tier-by-tier difficulty colors */
+    --color-difficulty-easy:   rgb(60, 130, 65);
+    --color-difficulty-medium: rgb(180, 155, 40);
+    --color-difficulty-hard:   rgb(200, 100, 35);
+    --color-difficulty-boss:   rgb(165, 35, 35);
+
+    /* ---- Buttons ---- */
+    --color-btn-primary:        rgb(152, 96, 50);
+    --color-btn-primary-text:   rgb(252, 240, 222);
+    --color-btn-secondary:      rgb(112, 86, 56);
+    --color-btn-secondary-text: rgb(252, 244, 230);
+    --color-btn-danger:         rgb(180, 60, 50);
+    --color-btn-danger-text:    rgb(255, 240, 235);
+    --color-btn-resume-bg:      rgb(255, 242, 130);
+    --color-btn-quit-bg:        rgb(250, 180, 180);
+    --color-btn-quit-text:      rgb(120, 35, 30);
+
+    /* ---- Tabs ---- */
+    --color-tab-yellow:        rgb(255, 242, 130);
+    --color-tab-yellow-active: rgb(255, 255, 145);
+    --color-tab-green:         rgb(170, 225, 170);
+    --color-tab-green-active:  rgb(185, 240, 185);
+    --color-tab-blue:          rgb(160, 200, 240);
+    --color-tab-blue-active:   rgb(175, 215, 255);
+
+    /* ---- Overlay / dimmer / shadow ---- */
+    --color-dimmer:          rgba(5, 8, 13, 0.65);
+    --color-dimmer-soft:     rgba(5, 8, 13, 0.45);
+    --color-shadow-soft:     rgba(0, 0, 0, 0.08);
+    --color-shadow-medium:   rgba(0, 0, 0, 0.12);
+    --color-shadow-strong:   rgba(0, 0, 0, 0.30);
+    --color-rule-line:       rgba(180, 166, 146, 0.314);
+    --color-margin-line:     rgba(210, 140, 140, 0.137);
+    --color-ruled-line:      rgba(180, 200, 220, 0.165);
+
+    /* ---- Spacing (4-step scale) ---- */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 22px;
+    --space-6: 28px;
+
+    /* ---- Radius ---- */
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 6px;
+    --radius-xl: 8px;
+    --radius-pill: 18px;
+
+    /* ---- Type scale ---- */
+    --font-size-xs:    13px;
+    --font-size-sm:    15px;
+    --font-size-md:    16px;
+    --font-size-lg:    19px;
+    --font-size-xl:    24px;
+    --font-size-title: 32px;
+
+    /* ---- Motion ---- */
+    --motion-fast:    80ms;
+    --motion-medium:  220ms;
+    --motion-slow:    380ms;
+
+    /* Interaction scale tokens. One source of truth for hover/press feel
+       so the project doesn't drift across 1.04 / 1.05 / 1.08 / 1.12 etc. */
+    --motion-hover-scale: 1.04;
+    --motion-press-scale: 0.96;
+
+    /* ---- Surface tokens (translucent papers, post-its, board straps) ----
+       Replace ad-hoc rgba() literals scattered across the components and HUD
+       sheets so every "paper-on-paper" surface tunes from one place. */
+    --surface-paper-translucent:  rgba(248, 244, 235, 0.94);
+    --surface-paper-card-soft:    rgba(252, 249, 240, 0.78);
+    --surface-paper-card-tint:    rgba(235, 226, 208, 0.55);
+    --surface-postit-yellow:      rgb(255, 245, 155);
+    --surface-postit-yellow-soft: rgba(255, 245, 155, 0.92);
+    --surface-board-strap:        rgba(112, 86, 56, 0.92);
+    --surface-board-strap-soft:   rgba(112, 86, 56, 0.78);
+    --surface-stamp-red:          rgba(200, 45, 35, 0.88);
+
+    /* ---- Border tokens (paper edges, board trim, ruled separators) ---- */
+    --border-paper-soft:    rgba(38, 28, 18, 0.08);
+    --border-paper-medium:  rgba(38, 28, 18, 0.14);
+    --border-paper-strong:  rgba(38, 28, 18, 0.32);
+    --border-board-trim:    rgba(112, 86, 56, 0.32);
+    --border-board-trim-strong: rgba(112, 86, 56, 0.55);
+    --border-ink-mute:      rgba(82, 66, 48, 0.32);
+
+    /* ---- Decorative opacity scale (tape / coffee ring / shadow) ---- */
+    --decor-opacity-faint:  0.22;
+    --decor-opacity-soft:   0.42;
+    --decor-opacity-medium: 0.55;
+    --decor-opacity-strong: 0.75;
+
+    /* ---- Control sizing (buttons, sliders, toggles, modal min-widths) ---- */
+    --control-h-sm: 28px;
+    --control-h-md: 36px;
+    --control-h-lg: 44px;
+    --btn-min-w:    140px;
+    --modal-min-w:  360px;
+    --modal-max-w:  92%;
+
+    /* ---- Card / portrait dimensions (clipboard directory) ---- */
+    --card-w:           332px;
+    --card-h:           476px;
+    --card-portrait-h:  232px;
+
+    /* ---- Type aliases (semantic naming layered on the px scale) ----
+       Use these on screen-level elements so the existing px-scale
+       (--font-size-xs..--font-size-title) can stay as the raw scale
+       and screens read what they mean. */
+    --font-size-display: 36px;
+    --font-size-section: 22px;
+    --font-size-body:    16px;
+
+    /* ---- Focus ring (accessibility - was being stripped to 0 width) ----
+       Wired through Button:focus / Slider:focus / Toggle:focus rules in
+       primitives.uss. Color is a high-contrast paper-friendly blue. */
+    --focus-ring-color: rgba(30, 80, 200, 0.55);
+    --focus-ring-width: 2px;
+
+    /* ---- Reticle palette (HUD crosshair) ---- */
+    --reticle-idle:     rgb(255, 255, 255);
+    --reticle-interact: rgb(80, 255, 110);
+    --reticle-grab:     rgb(255, 220, 90);
+
+    /* ---- Elevation shadow alpha for cards / modals ---- */
+    --shadow-card-rest:  rgba(0, 0, 0, 0.12);
+    --shadow-card-lift:  rgba(0, 0, 0, 0.22);
+    --shadow-modal:      rgba(0, 0, 0, 0.34);
+}

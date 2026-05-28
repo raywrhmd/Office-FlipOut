@@ -1,5 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <ui:Template name="ClipboardLayout" src="project://database/Assets/Resources/UI/Clipboard/ClipboardLayout.uxml?fileID=9197481963319205126&amp;guid=09b5a79499ad14bfb98ab4f40d253d0f&amp;type=3#ClipboardLayout"/>
-    <Style src="project://database/Assets/Resources/UI/Clipboard/ClipboardStyles.uss?fileID=7433441132597879392&amp;guid=c056e806b68a040918cebe01ed3fcf17&amp;type=3#ClipboardStyles"/>
-    <ui:Instance template="ClipboardLayout" style="flex-direction: row-reverse; height: 1138px;"/>
-</ui:UXML>

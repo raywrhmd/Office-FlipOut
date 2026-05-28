@@ -1,0 +1,23 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <!--
+      Reusable paper-clipboard decoration overlay.
+
+      Drop this as a sibling of .paper-content inside any element using
+      the .paper class to get the shared chrome:
+        - top-left tape strip
+        - bottom-right tape strip
+        - coffee ring stain
+        - right-side paper clip
+
+      The metal clipboard-clip lives outside .paper (inside .board-face)
+      so it stays as inline UXML in each host. All children below are
+      absolutely positioned via clipboard.base.uss, so the order of
+      siblings inside .paper does NOT change layout.
+    -->
+    <ui:VisualElement name="BoardChromeOverlay" class="board-chrome-overlay" picking-mode="Ignore">
+        <ui:VisualElement class="tape-strip tape-top-left"/>
+        <ui:VisualElement class="tape-strip tape-bottom-right"/>
+        <ui:VisualElement class="coffee-ring"/>
+        <ui:VisualElement class="board-paper-clip"/>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,39 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/UI/Theme/Tokens.uss?fileID=7433441132597879392&amp;guid=b2e7f593c4f8d65fbb2d63c9f8e0a2e5&amp;type=3#Tokens"/>
+    <Style src="project://database/Assets/Resources/UI/Theme/primitives.uss?fileID=7433441132597879392&amp;guid=f1e8c47aa9b045d2bbc94e1f6d28a703&amp;type=3#primitives"/>
+    <Style src="project://database/Assets/Resources/UI/Clipboard/clipboard.base.uss?fileID=7433441132597879392&amp;guid=c3a5e1f7d2b94a4cb831e7f4a52b8d63&amp;type=3#clipboard.base"/>
+    <Style src="project://database/Assets/Resources/UI/Clipboard/clipboard.components.uss?fileID=7433441132597879392&amp;guid=d4b6f208e3ca5b5dc942f805b63c9e74&amp;type=3#clipboard.components"/>
+    <Style src="project://database/Assets/Resources/UI/Clipboard/clipboard.states.uss?fileID=7433441132597879392&amp;guid=e5c7038f04db6c6ed053f916c74da085&amp;type=3#clipboard.states"/>
+    <Style src="project://database/Assets/Resources/UI/Menu/PauseMenu.uss?fileID=7433441132597879392&amp;guid=4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b&amp;type=3#PauseMenu"/>
+
+    <!--
+      Pause menu = miniature manila clipboard. Auto-sizes to its content
+      (no more fixed 540x720 box) so the panel stays compact when settings
+      is hidden and grows just enough to show settings when toggled. The
+      settings host is a ScrollView so very tall future settings still fit
+      inside the screen. Esc / PauseResume.Focus() handle keyboard flow.
+    -->
+    <ui:VisualElement name="PauseMenuRoot" class="pause-root pause-root--hidden" picking-mode="Position">
+        <ui:VisualElement name="PauseMenuDimmer" class="pause-dimmer modal-dimmer"/>
+        <ui:VisualElement name="PauseMenuCard" class="pause-card pause-board">
+            <ui:VisualElement class="pause-board-shadow"/>
+            <ui:VisualElement class="pause-clip"/>
+            <ui:VisualElement class="pause-paper">
+                <ui:VisualElement class="tape-strip pause-tape"/>
+                <ui:Label class="pause-title" text="PAUSED"/>
+                <ui:Label class="pause-subtitle" text="Take a breather - or leave the building."/>
+                <ui:VisualElement class="pause-rule"/>
+                <ui:ScrollView name="PauseSettingsHost" class="pause-settings-host" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                    <!-- SettingsPanelView mounts here at runtime. -->
+                </ui:ScrollView>
+                <ui:VisualElement class="pause-actions modal-actions">
+                    <ui:Button name="PauseResume"   class="btn btn--resume btn--lg pause-btn pause-btn--first pause-btn--primary"   text="Resume"/>
+                    <ui:Button name="PauseSettings" class="btn btn--secondary btn--lg pause-btn pause-btn--secondary" text="Settings"/>
+                    <ui:Button name="PauseRestart"  class="btn btn--secondary btn--lg pause-btn pause-btn--secondary" text="Restart Run"/>
+                    <ui:Button name="PauseToMenu"   class="btn btn--ghost btn--lg pause-btn pause-btn--secondary"     text="Quit to Menu"/>
+                    <ui:Button name="PauseQuit"     class="btn btn--danger btn--lg pause-btn pause-btn--danger"       text="Quit Game"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

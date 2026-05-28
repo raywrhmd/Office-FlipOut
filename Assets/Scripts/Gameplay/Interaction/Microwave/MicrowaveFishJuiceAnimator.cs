@@ -1,4 +1,5 @@
 using System.Collections;
+using OfficeFlipOut.Systems;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -16,10 +17,8 @@ public class MicrowaveFishJuiceAnimator : MonoBehaviour
     [SerializeField] private float spinWobbleAngle = 10f;
     [SerializeField] private Vector3 spinAxis = Vector3.up;
 
-    [Header("Optional SFX")]
-    [SerializeField] private AudioSource microwaveAudioSource;
-    [SerializeField] private AudioClip microwaveStartClip;
-    [SerializeField, Range(0f, 1f)] private float microwaveClipVolume = 0.9f;
+    [Header("SFX Settings")]
+    [SerializeField, Range(0f, 1f)] private float microwaveSfxVolume = 0.65f;
 
     private Coroutine activeRoutine;
     private Vector3 baseScale = Vector3.one;
@@ -80,7 +79,7 @@ public class MicrowaveFishJuiceAnimator : MonoBehaviour
         {
             t += Time.deltaTime;
             float progress = Mathf.Clamp01(t / halfDuration);
-            float eased = 1f - Mathf.Pow(1f - progress, 3f);
+            float eased = Easing.EaseOutCubic(progress);
             transform.localPosition = Vector3.Lerp(startLocalPosition, overshootPosition, eased);
             transform.localRotation = Quaternion.Slerp(startLocalRotation, finalRotation, eased);
 
@@ -95,7 +94,7 @@ public class MicrowaveFishJuiceAnimator : MonoBehaviour
         {
             t += Time.deltaTime;
             float progress = Mathf.Clamp01(t / halfDuration);
-            float eased = progress * progress * (3f - 2f * progress);
+            float eased = Easing.SmoothStep01(progress);
             transform.localPosition = Vector3.Lerp(overshootPosition, targetLocalPosition, eased);
             transform.localRotation = Quaternion.Slerp(finalRotation, targetLocalRotation, eased);
             transform.localScale = Vector3.Lerp(transform.localScale, baseScale, eased);
@@ -142,26 +141,11 @@ public class MicrowaveFishJuiceAnimator : MonoBehaviour
 
     private void PlayMicrowaveSfx()
     {
-        if (microwaveStartClip == null)
-        {
-            return;
-        }
-
-        if (microwaveAudioSource == null)
-        {
-            microwaveAudioSource = GetComponent<AudioSource>();
-        }
-
-        if (microwaveAudioSource == null)
-        {
-            microwaveAudioSource = gameObject.AddComponent<AudioSource>();
-            microwaveAudioSource.playOnAwake = false;
-            microwaveAudioSource.spatialBlend = 1f;
-            microwaveAudioSource.minDistance = 0.5f;
-            microwaveAudioSource.maxDistance = 10f;
-            microwaveAudioSource.rolloffMode = AudioRolloffMode.Linear;
-        }
-
-        microwaveAudioSource.PlayOneShot(microwaveStartClip, microwaveClipVolume);
+        AudioEvents.RequestAttachedOneShot(
+            AudioManager.AudioClipType.MicrowaveDing,
+            transform,
+            microwaveSfxVolume,
+            spatialBlend: 1f,
+            bus: AudioBus.Sfx);
     }
 }

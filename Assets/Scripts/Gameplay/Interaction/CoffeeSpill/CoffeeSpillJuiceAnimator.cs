@@ -1,4 +1,5 @@
 using System.Collections;
+using OfficeFlipOut.Systems;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -14,10 +15,8 @@ public class CoffeeSpillJuiceAnimator : MonoBehaviour
     [SerializeField] private GameObject splashVisual;
     [SerializeField] private GameObject stainVisual;
 
-    [Header("Optional SFX")]
-    [SerializeField] private AudioSource spillAudioSource;
-    [SerializeField] private AudioClip spillClip;
-    [SerializeField, Range(0f, 1f)] private float spillClipVolume = 0.9f;
+    [Header("SFX Settings")]
+    [SerializeField, Range(0f, 1f)] private float spillSfxVolume = 0.6f;
 
     [Header("Camera Juice")]
     [SerializeField, Min(0f)] private float cameraShakeAmplitude = 0.028f;
@@ -68,7 +67,7 @@ public class CoffeeSpillJuiceAnimator : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, tipDuration));
-            float eased = EaseOutCubic(t);
+            float eased = Easing.EaseOutCubic(t);
             transform.localRotation = Quaternion.Slerp(startLocalRotation, overshootRotation, eased);
             yield return null;
         }
@@ -90,7 +89,7 @@ public class CoffeeSpillJuiceAnimator : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, settleDuration));
-            float eased = EaseOutBack(t);
+            float eased = Easing.EaseOutBack(t);
             transform.localRotation = Quaternion.Slerp(overshootRotation, targetLocalRotation, eased);
             yield return null;
         }
@@ -107,27 +106,18 @@ public class CoffeeSpillJuiceAnimator : MonoBehaviour
 
     private void PlaySpillSfx()
     {
-        if (spillClip == null)
-        {
-            return;
-        }
+        // Keep fallback behavior if typing clip isn't assigned.
+        AudioManager.AudioClipType clipType =
+            AudioManager.GetClip(AudioManager.AudioClipType.KeyboardTyping) != null
+                ? AudioManager.AudioClipType.KeyboardTyping
+                : AudioManager.AudioClipType.WalkingSteps;
 
-        if (spillAudioSource == null)
-        {
-            spillAudioSource = GetComponent<AudioSource>();
-        }
-
-        if (spillAudioSource == null)
-        {
-            spillAudioSource = gameObject.AddComponent<AudioSource>();
-            spillAudioSource.playOnAwake = false;
-            spillAudioSource.spatialBlend = 1f;
-            spillAudioSource.minDistance = 0.4f;
-            spillAudioSource.maxDistance = 7f;
-            spillAudioSource.rolloffMode = AudioRolloffMode.Linear;
-        }
-
-        spillAudioSource.PlayOneShot(spillClip, spillClipVolume);
+        AudioEvents.RequestAttachedOneShot(
+            clipType,
+            transform,
+            spillSfxVolume,
+            spatialBlend: 1f,
+            bus: AudioBus.Sfx);
     }
 
     private IEnumerator ShakeCameraRoutine(Transform cameraTransform)
@@ -169,17 +159,4 @@ public class CoffeeSpillJuiceAnimator : MonoBehaviour
         }
     }
 
-    private static float EaseOutCubic(float t)
-    {
-        float i = 1f - t;
-        return 1f - (i * i * i);
-    }
-
-    private static float EaseOutBack(float t)
-    {
-        const float c1 = 1.70158f;
-        const float c3 = c1 + 1f;
-        float x = t - 1f;
-        return 1f + (c3 * x * x * x) + (c1 * x * x);
-    }
 }

@@ -1,0 +1,556 @@
+/* ===================================================================
+   Office Flip Out - UI primitives
+   One canonical home for buttons, modals, chips, bars, fields,
+   focus, and unity-control overrides. Every screen consumes from
+   here so the whole project shares a single set of interactive
+   surfaces tuned by design tokens. Loaded after Tokens.uss; component
+   sheets (clipboard.*, HudStyles, PauseMenu) layer on top with
+   screen-specific overrides only.
+   =================================================================== */
+
+
+/* ===================================================================
+   FOCUS RING
+   Replaces the project-wide "Button:focus { border-width: 0 }" zero-out
+   so keyboard users can see what's focused. Tuned to read on paper.
+   =================================================================== */
+
+Button:focus,
+Slider:focus,
+Toggle:focus,
+ScrollView:focus {
+    border-left-width: var(--focus-ring-width);
+    border-right-width: var(--focus-ring-width);
+    border-top-width: var(--focus-ring-width);
+    border-bottom-width: var(--focus-ring-width);
+    border-left-color: var(--focus-ring-color);
+    border-right-color: var(--focus-ring-color);
+    border-top-color: var(--focus-ring-color);
+    border-bottom-color: var(--focus-ring-color);
+}
+
+
+/* ===================================================================
+   BUTTON PRIMITIVE
+   `.btn` is the canonical interactive surface. Variants compose:
+     .btn .btn--primary | --secondary | --danger | --ghost
+   Sizes:
+     .btn--sm | --md (default) | --lg
+   Existing legacy classes (.footer-btn, .pause-btn, .btn-pause,
+   .btn-open-profile, .win-screen-btn, .main-menu-start-btn,
+   .quit-corner-btn) inherit from .btn via class composition added
+   directly in the UXML so screen-specific positioning still works.
+   =================================================================== */
+
+.btn {
+    min-height: var(--control-h-md);
+    height: var(--control-h-md);
+    padding: 0 var(--space-4);
+    background-color: var(--color-btn-primary);
+    color: var(--color-btn-primary-text);
+    -unity-font-style: bold;
+    font-size: var(--font-size-md);
+    -unity-text-align: middle-center;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    transition-property: scale, opacity, background-color;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+}
+
+.btn:hover    { scale: var(--motion-hover-scale) var(--motion-hover-scale); }
+.btn:active   { scale: var(--motion-press-scale) var(--motion-press-scale); }
+.btn:disabled { opacity: 0.45; }
+
+.btn--sm { min-height: var(--control-h-sm); height: var(--control-h-sm); font-size: var(--font-size-sm); padding: 0 var(--space-3); }
+.btn--md { min-height: var(--control-h-md); height: var(--control-h-md); }
+.btn--lg { min-height: var(--control-h-lg); height: var(--control-h-lg); font-size: var(--font-size-md); padding: 0 var(--space-5); }
+
+.btn--primary {
+    background-color: var(--color-btn-primary);
+    color: var(--color-btn-primary-text);
+}
+
+.btn--secondary {
+    background-color: var(--color-btn-secondary);
+    color: var(--color-btn-secondary-text);
+}
+
+.btn--danger {
+    background-color: var(--color-btn-danger);
+    color: var(--color-btn-danger-text);
+}
+
+/* "Ghost" - paper-tinted, ink-on-paper, no fill. Used for soft tertiary
+   actions like "Close Clipboard" / "Cancel" so the primary CTA can stay
+   the loudest element. */
+.btn--ghost {
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--color-ink-strong);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-strong);
+    border-right-color: var(--border-paper-strong);
+    border-top-color: var(--border-paper-strong);
+    border-bottom-color: var(--border-paper-strong);
+}
+
+/* "Resume" - bright sticky-tab yellow, ink-on-paper. Used as the
+   highlighted "go back to play" action across pause / quit popups. */
+.btn--resume {
+    background-color: var(--color-btn-resume-bg);
+    color: var(--color-ink-strong);
+}
+
+.btn--quit-soft {
+    background-color: var(--color-btn-quit-bg);
+    color: var(--color-btn-quit-text);
+}
+
+
+/* ===================================================================
+   MODAL CARD PRIMITIVE
+   Shared paper-card scaffold for any centered modal: pause card,
+   win-screen, in-clipboard quit popup, future settings dialog, etc.
+   Use .modal-dimmer + .modal-card together. Pair with .modal-actions
+   for the button row at the bottom.
+   =================================================================== */
+
+.modal-dimmer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: var(--color-dimmer);
+    transition-property: opacity;
+    transition-duration: var(--motion-medium);
+}
+
+.modal-card {
+    background-color: var(--color-paper);
+    padding: var(--space-6) var(--space-6) var(--space-5) var(--space-6);
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-medium);
+    border-right-color: var(--border-paper-medium);
+    border-top-color: var(--border-paper-medium);
+    border-bottom-color: var(--border-paper-medium);
+    min-width: var(--modal-min-w);
+    max-width: var(--modal-max-w);
+    margin: var(--space-4);
+    align-items: stretch;
+}
+
+.modal-card--sm { min-width: 320px; max-width: 420px; padding: var(--space-5) var(--space-5) var(--space-4); }
+.modal-card--md { min-width: 420px; max-width: 540px; }
+.modal-card--lg { min-width: 480px; max-width: 720px; }
+
+.modal-card--centered { align-items: center; }
+
+/* "Inset" card used inside a panel (e.g. dossier objective block,
+   progress objective brief). Differs from .modal-card by being a
+   tinted recess, not a freestanding floating card. */
+.modal-card--inset {
+    background-color: var(--surface-paper-card-tint);
+    border-left-width: 3px;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-left-color: var(--border-board-trim-strong);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+    margin: 0;
+}
+
+.modal-title {
+    color: var(--color-ink-strong);
+    font-size: var(--font-size-title);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-bottom: var(--space-2);
+    letter-spacing: 1px;
+}
+
+.modal-subtitle {
+    color: var(--color-ink-muted);
+    font-size: var(--font-size-md);
+    -unity-text-align: middle-center;
+    margin-bottom: var(--space-5);
+    white-space: normal;
+}
+
+.modal-body {
+    color: var(--color-ink-medium);
+    font-size: var(--font-size-md);
+    white-space: normal;
+}
+
+.modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: var(--space-3);
+}
+
+.modal-actions--row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.modal-actions .btn,
+.modal-actions--row .btn {
+    margin: var(--space-1) var(--space-2);
+    min-width: var(--btn-min-w);
+}
+
+
+/* ===================================================================
+   CHIP PRIMITIVE
+   One canonical chip used by HUD roster, progress rows, dossier
+   triggers, and card status badges. Variants drive color only.
+   =================================================================== */
+
+.chip {
+    font-size: var(--font-size-xs);
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    background-color: var(--color-status-locked);
+    padding: 3px 9px;
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    -unity-text-align: middle-center;
+    letter-spacing: 0.5px;
+    transition-property: background-color, color;
+    transition-duration: var(--motion-medium);
+}
+
+.chip--active   { background-color: var(--color-status-active);  color: rgb(255, 255, 255); }
+.chip--calm     { background-color: var(--color-status-active);  color: rgb(255, 255, 255); }
+.chip--agitated { background-color: rgb(180, 130, 40);           color: rgb(255, 255, 255); }
+.chip--hot      { background-color: var(--color-rage-high);      color: rgb(255, 255, 255); }
+.chip--flipped  { background-color: var(--color-status-flipped); color: rgb(255, 240, 235); }
+.chip--locked   { background-color: var(--color-status-locked);  color: rgb(240, 232, 220); }
+.chip--pending  { background-color: rgb(155, 110, 50);           color: rgb(255, 248, 235); }
+.chip--done     { background-color: var(--color-status-active);  color: rgb(255, 255, 255); }
+
+/* Pill variant - fully-rounded, slightly softer. Used for the HUD
+   hint toast and the roster peek pill. */
+.chip--pill {
+    border-top-left-radius: var(--radius-pill);
+    border-top-right-radius: var(--radius-pill);
+    border-bottom-left-radius: var(--radius-pill);
+    border-bottom-right-radius: var(--radius-pill);
+    padding: 4px 12px;
+}
+
+
+/* ===================================================================
+   BAR PRIMITIVE
+   Replaces three near-identical track/fill pairs in the codebase
+   (.progress-bar-*, .npc-rage-bar-*, .roster-bar-*). Variants drive
+   color and intent only.
+   =================================================================== */
+
+.bar-track {
+    height: 12px;
+    background-color: rgb(220, 215, 205);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-medium);
+    border-right-color: var(--border-paper-medium);
+    border-top-color: var(--border-paper-medium);
+    border-bottom-color: var(--border-paper-medium);
+    overflow: hidden;
+}
+
+.bar-track--sm { height: 11px; }
+.bar-track--md { height: 12px; }
+.bar-track--lg { height: 14px; }
+
+.bar-fill {
+    width: 0%;
+    height: 100%;
+    background-color: var(--color-status-active);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    transition-property: width, background-color;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+}
+
+.bar-fill--rage     { background-color: var(--color-rage-low); }
+.bar-fill--hot      { background-color: var(--color-rage-high); }
+.bar-fill--flipped  { background-color: var(--color-status-flipped); }
+.bar-fill--locked   { background-color: var(--color-status-locked); }
+.bar-fill--security { background-color: rgb(200, 130, 45); }
+
+
+/* ===================================================================
+   FIELD ROW / SECTION PRIMITIVE
+   Reusable settings row for SettingsPanelView (and any future settings
+   dialog). Lifted out of PauseMenu.uss so the same SettingsPanelView
+   instance renders correctly inside the main menu / standalone settings
+   without dragging PauseMenu.uss with it.
+   =================================================================== */
+
+.field-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.field-label {
+    color: var(--color-ink-medium);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.field-control {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-width: 220px;
+}
+
+.section-title {
+    color: var(--color-ink-strong);
+    font-size: var(--font-size-md);
+    -unity-font-style: bold;
+    margin-top: var(--space-3);
+    margin-bottom: var(--space-1);
+    letter-spacing: 0.5px;
+}
+
+.section-title--display {
+    font-size: var(--font-size-display);
+    letter-spacing: 1.5px;
+}
+
+.section-title--screen {
+    font-size: var(--font-size-section);
+    letter-spacing: 0.5px;
+    margin-bottom: var(--space-2);
+}
+
+
+/* ===================================================================
+   UNITY CONTROL OVERRIDES
+   Re-skin Slider and Toggle so they fit the paper aesthetic when the
+   SettingsPanelView mounts them.
+   =================================================================== */
+
+Slider {
+    margin: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: var(--control-h-sm);
+}
+
+Slider .unity-base-slider__tracker {
+    background-color: rgb(218, 210, 196);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+Slider .unity-base-slider__dragger {
+    background-color: var(--color-board);
+    border-top-left-radius: 50%;
+    border-top-right-radius: 50%;
+    border-bottom-left-radius: 50%;
+    border-bottom-right-radius: 50%;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: var(--color-paper-card);
+    border-right-color: var(--color-paper-card);
+    border-top-color: var(--color-paper-card);
+    border-bottom-color: var(--color-paper-card);
+}
+
+Slider .unity-base-slider__dragger:hover { scale: var(--motion-hover-scale) var(--motion-hover-scale); }
+
+/* Sliders rendered with showInputField=true ship a built-in TextField on
+   the right; restyle so it reads as ink-on-paper instead of Unity gray. */
+Slider .unity-base-field__input {
+    background-color: var(--color-paper-card);
+    color: var(--color-ink-strong);
+    -unity-font-style: bold;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-strong);
+    border-right-color: var(--border-paper-strong);
+    border-top-color: var(--border-paper-strong);
+    border-bottom-color: var(--border-paper-strong);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    min-width: 42px;
+    padding: 2px 6px;
+    font-size: var(--font-size-xs);
+}
+
+/* Toggle keeps Unity's internal flex-direction: row but pushes the checkmark
+   to the right end of its container so it lines up nicely with the right
+   edge of slider rows when both share the same .field-control width. */
+Toggle {
+    margin: 0;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+Toggle .unity-toggle__checkmark {
+    background-color: var(--color-paper-card);
+    width: 18px;
+    height: 18px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-strong);
+    border-right-color: var(--border-paper-strong);
+    border-top-color: var(--border-paper-strong);
+    border-bottom-color: var(--border-paper-strong);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+}
+
+Toggle:checked .unity-toggle__checkmark {
+    background-color: var(--color-status-active);
+    border-left-color: var(--color-status-active);
+    border-right-color: var(--color-status-active);
+    border-top-color: var(--color-status-active);
+    border-bottom-color: var(--color-status-active);
+}
+
+Toggle Label {
+    color: var(--color-ink-medium);
+    -unity-font-style: bold;
+}
+
+
+/* ===================================================================
+   MOTION-REDUCED OPT-IN
+   Wired from a "Reduce Motion" toggle in SettingsPanelView - dropping
+   --motion-* durations to 0 globally instead of touching every component.
+   The toggle sets this class on the topmost UI panel via C#.
+   =================================================================== */
+
+.motion-reduced {
+    --motion-fast:    0ms;
+    --motion-medium:  0ms;
+    --motion-slow:    0ms;
+}
+
+
+/* ===================================================================
+   STAMP / BANNER DECORATIONS
+   Used by the Win overlay and dossier "TO DO" header to evoke the
+   "rubber stamp on paper" feel without bringing in art assets.
+   =================================================================== */
+
+.stamp-banner {
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--color-red-pen);
+    -unity-font-style: bold;
+    font-size: var(--font-size-section);
+    letter-spacing: 4px;
+    padding: 6px 14px;
+    border-left-width: 3px;
+    border-right-width: 3px;
+    border-top-width: 3px;
+    border-bottom-width: 3px;
+    border-left-color: var(--color-red-pen);
+    border-right-color: var(--color-red-pen);
+    border-top-color: var(--color-red-pen);
+    border-bottom-color: var(--color-red-pen);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    rotate: -3deg;
+    align-self: center;
+}
+
+
+/* ===================================================================
+   BACKWARDS-COMPAT BRIDGES
+   Forward the project's legacy button class names onto the .btn
+   primitive so existing UXML keeps working without churn while it
+   gradually adopts the new vocabulary. Each rule only applies the
+   shared reset; per-screen positioning stays in the screen sheets.
+   =================================================================== */
+
+.footer-btn,
+.pause-btn,
+.btn-pause,
+.btn-open-profile,
+.win-screen-btn,
+.main-menu-start-btn,
+.main-menu-quit-btn {
+    transition-property: scale, opacity, background-color;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+}
+
+.footer-btn:hover,
+.pause-btn:hover,
+.btn-pause:hover,
+.btn-open-profile:hover,
+.win-screen-btn:hover,
+.main-menu-start-btn:hover,
+.main-menu-quit-btn:hover { scale: var(--motion-hover-scale) var(--motion-hover-scale); }
+
+.footer-btn:active,
+.pause-btn:active,
+.btn-pause:active,
+.btn-open-profile:active,
+.win-screen-btn:active,
+.main-menu-start-btn:active,
+.main-menu-quit-btn:active { scale: var(--motion-press-scale) var(--motion-press-scale); }
+
+.footer-btn:disabled,
+.pause-btn:disabled,
+.btn-pause:disabled,
+.btn-open-profile:disabled,
+.win-screen-btn:disabled,
+.main-menu-start-btn:disabled,
+.main-menu-quit-btn:disabled { opacity: 0.45; }

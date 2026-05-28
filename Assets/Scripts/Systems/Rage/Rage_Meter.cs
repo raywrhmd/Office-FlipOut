@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
+using OfficeFlipOut.Data;
 using OfficeFlipOut.Systems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -50,6 +51,13 @@ public class Rage_Meter : MonoBehaviour
     [SerializeField] private float flipOutBlastUpwardsModifier = 1.5f;
     [SerializeField] private float flipOutBlastRandomTorque = 10f;
     [SerializeField] private ForceMode flipOutBlastForceMode = ForceMode.Impulse;
+
+    [Header("Flip Out Audio")]
+    [SerializeField] private bool playValkyrieOnFlipOut = true;
+    [SerializeField, Min(0f)] private float valkyrieBrassFanfareStartSeconds = 43.5f;
+    [SerializeField, Min(0.05f)] private float valkyrieFadeInSeconds = 0.85f;
+    [SerializeField] private bool duckAmbientOnFlipOut = true;
+    [SerializeField, Min(0.1f)] private float ambientDuckDuration = 1.2f;
 
     [Header("Visuals")]
     [SerializeField] private bool ensureNpcFacesCamera = true;
@@ -117,6 +125,24 @@ public class Rage_Meter : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Sprite to show in the dossier "WHEN FLIPPED" inset. Prefers the
+    /// dedicated flip-out body sprite, falls back to the angry intermediate.
+    /// Returns null if neither is configured (the inset stays hidden).
+    /// </summary>
+    public Sprite ClipboardFlipOutPortraitSprite
+    {
+        get
+        {
+            if (npcFlipOutBodySprite != null)
+            {
+                return npcFlipOutBodySprite;
+            }
+
+            return npcAngrySprite;
+        }
+    }
+
     private readonly HashSet<string> receivedSignalIds = new HashSet<string>();
     private readonly HashSet<int> countedProjectileObjectIds = new HashSet<int>();
 
@@ -152,9 +178,9 @@ public class Rage_Meter : MonoBehaviour
 
         switch (id.Trim())
         {
-            case "npc1": return "npc_1";
-            case "npc2": return "npc_2";
-            case "npc3": return "npc_3";
+            case "npc1": return NpcIds.Sandra;
+            case "npc2": return NpcIds.Brutus;
+            case "npc3": return NpcIds.Tommy;
             default: return id;
         }
     }
@@ -278,21 +304,18 @@ public class Rage_Meter : MonoBehaviour
     private bool IsDebugKeyPressed(KeyCode keyCode)
     {
 #if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null)
+        if (Keyboard.current == null)
         {
-            Key inputSystemKey = ConvertToInputSystemKey(keyCode);
-            if (inputSystemKey != Key.None)
-            {
-                return Keyboard.current[inputSystemKey].wasPressedThisFrame;
-            }
+            return false;
+        }
+
+        Key inputSystemKey = ConvertToInputSystemKey(keyCode);
+        if (inputSystemKey != Key.None)
+        {
+            return Keyboard.current[inputSystemKey].wasPressedThisFrame;
         }
 #endif
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return Input.GetKeyDown(keyCode);
-#else
         return false;
-#endif
     }
 
 #if ENABLE_INPUT_SYSTEM
@@ -523,7 +546,7 @@ public class Rage_Meter : MonoBehaviour
         {
             focusElapsed += Time.deltaTime;
             float t = Mathf.Clamp01(focusElapsed / cameraMoveToNpcDuration);
-            float eased = t * t * (3f - 2f * t);
+            float eased = Easing.SmoothStep01(t);
             cinematicTransform.position = Vector3.Lerp(cameraStartPosition, cinematicFocusPosition, eased);
             Quaternion dynamicLookRotation = GetLookRotationFromPosition(cinematicTransform.position, cinematicFocusRotation);
             cinematicTransform.rotation = Quaternion.Slerp(cameraStartRotation, dynamicLookRotation, eased);
@@ -555,7 +578,7 @@ public class Rage_Meter : MonoBehaviour
         {
             returnElapsed += Time.deltaTime;
             float t = Mathf.Clamp01(returnElapsed / cameraReturnToPlayerDuration);
-            float eased = t * t * (3f - 2f * t);
+            float eased = Easing.SmoothStep01(t);
             cinematicTransform.position = Vector3.Lerp(returnStartPosition, cameraStartPosition, eased);
             cinematicTransform.rotation = Quaternion.Slerp(returnStartRotation, cameraStartRotation, eased);
             yield return null;
@@ -655,6 +678,26 @@ public class Rage_Meter : MonoBehaviour
         RefreshNpcBodySprite();
         RefreshRageFaceSprite();
         FlippedOut?.Invoke(this);
+
+        if (playValkyrieOnFlipOut)
+        {
+            if (duckAmbientOnFlipOut)
+            {
+                AudioDucker.DuckAmbience(ambientDuckDuration);
+            }
+
+            float flipOutMusicHold = Mathf.Max(
+                0.5f,
+                npcRageDuration + (playFlipOutCinematic ? cameraReturnToPlayerDuration : 0f));
+
+            AudioManager.PlayTemporaryMusicFromTime(
+                AudioManager.AudioClipType.RideOfTheValkyries,
+                valkyrieBrassFanfareStartSeconds,
+                valkyrieFadeInSeconds,
+                flipOutMusicHold,
+                AudioManager.AudioClipType.BackgroundMusic,
+                0.6f);
+        }
 
         if (flipOutReceiver != null && !string.IsNullOrEmpty(flipOutMethodName))
         {

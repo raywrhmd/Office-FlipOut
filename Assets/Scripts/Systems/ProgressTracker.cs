@@ -7,11 +7,6 @@ namespace OfficeFlipOut.Systems
 {
     public class ProgressTracker : MonoBehaviour
     {
-        private const string SandraNpcId = "npc_1";
-        private const string BrutusNpcId = "npc_2";
-        private const string TommyNpcId = "npc_3";
-        private const string BossNpcId = "boss_1";
-
         [Serializable]
         public class EmployeeProgressSnapshot
         {
@@ -29,12 +24,12 @@ namespace OfficeFlipOut.Systems
             {
                 get
                 {
-                    if (npcId == BossNpcId)
+                    if (npcId == NpcIds.Boss)
                     {
                         return 1;
                     }
 
-                    if (npcId == BrutusNpcId)
+                    if (npcId == NpcIds.Brutus)
                     {
                         return Mathf.Clamp(requiredSignals, 1, 2);
                     }
@@ -47,14 +42,14 @@ namespace OfficeFlipOut.Systems
             {
                 get
                 {
-                    if (npcId == BossNpcId)
+                    if (npcId == NpcIds.Boss)
                     {
                         return isFlippedOut ? 1 : 0;
                     }
 
                     int completed = 0;
 
-                    if (npcId == BrutusNpcId)
+                    if (npcId == NpcIds.Brutus)
                     {
                         if (TotalTasksCount >= 1 && microwavedFish) completed++;
                         if (TotalTasksCount >= 2 && tookStapler) completed++;
@@ -96,7 +91,7 @@ namespace OfficeFlipOut.Systems
             Instance = this;
             if (employeeProfileDatabase == null)
             {
-                employeeProfileDatabase = Resources.Load<EmployeeProfileDatabase>("EmployeeProfileDatabase");
+                employeeProfileDatabase = ProjectBootstrap.LoadEmployeeProfileDatabase(true);
             }
 
             RebuildTrackedMeters();
@@ -233,7 +228,7 @@ namespace OfficeFlipOut.Systems
                 return "All known coworkers are fully destabilized.";
             }
 
-            if (target.npcId == BrutusNpcId)
+            if (target.npcId == NpcIds.Brutus)
             {
                 if (target.TotalTasksCount >= 1 && !target.microwavedFish)
                 {
@@ -248,7 +243,7 @@ namespace OfficeFlipOut.Systems
                 }
             }
 
-            if (target.npcId == SandraNpcId)
+            if (target.npcId == NpcIds.Sandra)
             {
                 if (target.TotalTasksCount >= 1 && !target.spilledDrink)
                 {
@@ -269,12 +264,12 @@ namespace OfficeFlipOut.Systems
                 }
             }
 
-            if (target.npcId == TommyNpcId)
+            if (target.npcId == NpcIds.Tommy)
             {
                 if (target.TotalTasksCount >= 1 && !target.spilledDrink)
                 {
-                    nextSuggestedAction = "Hit him with a paper ball, sticky hand, or Nerf dart.";
-                    return "Raise " + target.displayName + " rage by hitting him with a projectile.";
+                    nextSuggestedAction = "Throw a paper ball, sticky hand, or Nerf dart at him.";
+                    return "Raise " + target.displayName + " rage by throwing something at him.";
                 }
 
                 if (target.TotalTasksCount >= 2 && !target.microwavedFish)
@@ -290,7 +285,7 @@ namespace OfficeFlipOut.Systems
                 }
             }
 
-            if (target.npcId == BossNpcId)
+            if (target.npcId == NpcIds.Boss)
             {
                 nextSuggestedAction = "Flip every coworker first.";
                 return "Da Boss stays locked until every coworker has FLIP OUT.";
@@ -320,6 +315,23 @@ namespace OfficeFlipOut.Systems
 
         public Sprite GetNpcPortraitSprite(string npcId)
         {
+            Rage_Meter meter = FindMeterForNpc(npcId);
+            return meter != null ? meter.ClipboardPortraitSprite : null;
+        }
+
+        /// <summary>
+        /// Returns the dossier "WHEN FLIPPED" portrait for an NPC by reusing
+        /// the same flip-out body sprite the in-world Rage_Meter renders during
+        /// flip-out. Avoids duplicating sprite refs in UI code.
+        /// </summary>
+        public Sprite GetNpcFlipOutPortraitSprite(string npcId)
+        {
+            Rage_Meter meter = FindMeterForNpc(npcId);
+            return meter != null ? meter.ClipboardFlipOutPortraitSprite : null;
+        }
+
+        private Rage_Meter FindMeterForNpc(string npcId)
+        {
             if (string.IsNullOrWhiteSpace(npcId))
             {
                 return null;
@@ -341,7 +353,7 @@ namespace OfficeFlipOut.Systems
                 string meterNpcId = string.IsNullOrWhiteSpace(meter.NpcSignalId) ? meter.name : meter.NpcSignalId;
                 if (meterNpcId == npcId)
                 {
-                    return meter.ClipboardPortraitSprite;
+                    return meter;
                 }
             }
 
@@ -401,13 +413,13 @@ namespace OfficeFlipOut.Systems
                 snapshot.currentRage = meter.CurrentRage;
                 snapshot.requiredSignals = meter.RequiredSignals;
                 snapshot.isFlippedOut = meter.IsFlippedOut;
-                if (snapshot.npcId == BrutusNpcId)
+                if (snapshot.npcId == NpcIds.Brutus)
                 {
                     snapshot.spilledDrink = meter.HasReceivedSignal(RageSignalIds.SpillDrinkOnDesk);
                     snapshot.microwavedFish = meter.HasReceivedSignal(RageSignalIds.BringObjectNear);
                     snapshot.tookStapler = meter.HasReceivedSignal(RageSignalIds.KnockOver);
                 }
-                else if (snapshot.npcId == TommyNpcId)
+                else if (snapshot.npcId == NpcIds.Tommy)
                 {
                     snapshot.spilledDrink = meter.HasReceivedSignal(RageSignalIds.HitNpcWithProjectile);
                     snapshot.microwavedFish = meter.HasReceivedSignal(RageSignalIds.MakeLoudNoise);
@@ -423,7 +435,40 @@ namespace OfficeFlipOut.Systems
                 snapshots.Add(snapshot);
             }
 
+            // Sort by difficulty so every consumer (HUD roster, clipboard
+            // directory, GetObjectiveText / FindFirstIncompleteSnapshot) walks
+            // staff in the same easy-to-hard sequence regardless of the
+            // order Unity returned them from FindObjectsByType.
+            snapshots.Sort(CompareSnapshotsByDifficulty);
+
             ProgressChanged?.Invoke();
+        }
+
+        private int CompareSnapshotsByDifficulty(EmployeeProgressSnapshot a, EmployeeProgressSnapshot b)
+        {
+            int tierA = GetDifficultyTierForNpc(a?.npcId);
+            int tierB = GetDifficultyTierForNpc(b?.npcId);
+            int diff = tierA - tierB;
+            if (diff != 0) return diff;
+
+            string nameA = a?.displayName ?? string.Empty;
+            string nameB = b?.displayName ?? string.Empty;
+            return string.Compare(nameA, nameB, System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Resolves an NPC's difficulty tier via the employee profile database.
+        /// Unknown / unmatched ids sink to the end of any sort.
+        /// </summary>
+        private int GetDifficultyTierForNpc(string npcId)
+        {
+            if (string.IsNullOrWhiteSpace(npcId) || employeeProfileDatabase == null)
+            {
+                return int.MaxValue;
+            }
+
+            EmployeeProfileData profile = employeeProfileDatabase.GetProfileByNpcId(npcId);
+            return profile != null ? (int)profile.DifficultyTier : int.MaxValue;
         }
 
         private string ResolveDisplayName(string npcId, string meterObjectName)

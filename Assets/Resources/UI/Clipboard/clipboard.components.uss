@@ -1,0 +1,1496 @@
+/* ===================================================================
+   Office Flip Out - Clipboard COMPONENTS
+   Cards, dossier, progress rows, map, post-it, quit popup, hint,
+   main menu screen. State/animation classes live in clipboard.states.uss.
+   =================================================================== */
+
+/* ===================================================================
+   DIRECTORY PANEL
+   =================================================================== */
+
+.directory-grid-view {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    flex-direction: column;
+}
+
+.dossier-view {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    flex-direction: column;
+    background-color: var(--color-paper);
+    padding-top: 2px;
+}
+
+.directory-title-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 28px;
+    flex-shrink: 0;
+    margin-bottom: 6px;
+    padding-left: 4px;
+}
+
+.directory-title {
+    font-size: var(--font-size-section);
+    -unity-font-style: bold;
+    color: var(--color-ink);
+    letter-spacing: 0.5px;
+    margin-right: var(--space-3);
+}
+
+.directory-note {
+    font-size: var(--font-size-sm);
+    -unity-font-style: italic;
+    color: var(--color-handwritten-2);
+    flex-grow: 1;
+}
+
+/* Staff grid is a centered row of fixed-size cards. No count-based width
+   gymnastics anymore - each card owns its own dimensions. */
+.staff-grid {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    flex-grow: 1;
+}
+
+/* Cards are STRICTLY 332x476 (token-driven via --card-w / --card-h). No
+   flex-grow / flex-basis trickery, so a single card looks identical to
+   one of three side-by-side. The portrait and pinned button never drift
+   between cards. */
+.staff-card {
+    width: var(--card-w);
+    min-width: var(--card-w);
+    max-width: var(--card-w);
+    height: var(--card-h);
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-basis: var(--card-w);
+    margin-left: var(--space-2);
+    margin-right: var(--space-2);
+    background-color: var(--color-paper-card);
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-soft);
+    border-right-color: var(--border-paper-soft);
+    border-top-color: var(--border-paper-soft);
+    border-bottom-color: var(--border-paper-soft);
+    flex-direction: column;
+    overflow: visible;
+}
+
+/* Centered hint when fewer than 3 cards are visible. Cards stay fixed-size,
+   the grid just centers them. */
+.staff-grid--centered { justify-content: center; }
+
+.card-shadow {
+    position: absolute;
+    left: 3px;
+    right: -5px;
+    top: 1px;
+    bottom: -4px;
+    background-color: var(--shadow-card-rest);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+}
+
+.card-color-strip {
+    height: 8px;
+    flex-shrink: 0;
+    background-color: rgb(128, 70, 160);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.card-inner {
+    flex-grow: 1;
+    flex-shrink: 0;
+    padding: 9px 12px 11px;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header row holds name + difficulty pill. Reserved height keeps the
+   portrait baseline identical across cards even if names wrap. */
+.card-header-row {
+    flex-direction: row;
+    align-items: center;
+    height: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
+    margin-bottom: 2px;
+}
+
+.card-name {
+    font-size: var(--font-size-lg);
+    -unity-font-style: bold;
+    color: var(--color-ink);
+    flex-grow: 1;
+    flex-shrink: 1;
+    -unity-text-align: middle-left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.card-difficulty {
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    color: var(--color-difficulty-medium);
+    -unity-text-align: middle-right;
+    flex-shrink: 0;
+    min-width: 56px;
+    margin-left: var(--space-2);
+}
+
+.card-role {
+    font-size: var(--font-size-sm);
+    -unity-font-style: italic;
+    color: var(--color-ink-muted);
+    height: 18px;
+    min-height: 18px;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 6px;
+}
+
+/* Portrait is a strict 232px slot, never grows or shrinks. scale-to-fit
+   ensures characters of different proportions render at the same scale. */
+.card-portrait {
+    height: var(--card-portrait-h);
+    min-height: var(--card-portrait-h);
+    max-height: var(--card-portrait-h);
+    flex-grow: 0;
+    flex-shrink: 0;
+    background-color: var(--color-paper-card);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-medium);
+    border-right-color: var(--border-paper-medium);
+    border-top-color: var(--border-paper-medium);
+    border-bottom-color: var(--border-paper-medium);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-2);
+    overflow: hidden;
+}
+
+/* Dedicated portrait image layer gives us framing control without
+   affecting the status badge / card shell. */
+.card-portrait-image {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 8px;
+    bottom: 8px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* NPC-specific framing trims to equalize perceived visual mass. */
+.portrait-image--sandra {
+    left: 14px;
+    right: 14px;
+    top: 8px;
+    bottom: 4px;
+}
+
+.portrait-image--brutus {
+    left: 4px;
+    right: 4px;
+    top: 6px;
+    bottom: 6px;
+}
+
+.portrait-image--tommy {
+    left: 10px;
+    right: 10px;
+    top: 7px;
+    bottom: 5px;
+}
+
+.rage-face-badge {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    width: 48px;
+    height: 48px;
+    background-color: var(--surface-paper-translucent);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-ink-mute);
+    border-right-color: var(--border-ink-mute);
+    border-top-color: var(--border-ink-mute);
+    border-bottom-color: var(--border-ink-mute);
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    border-bottom-left-radius: 24px;
+    border-bottom-right-radius: 24px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* Reserved 28px slot beneath the portrait. Holds the status badge OR the
+   lock badge - the two are mutually exclusive and never both visible. The
+   reserved height means swapping between them does not move the dislikes
+   line or the pinned button below. */
+.card-status-slot {
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: stretch;
+    margin-bottom: 6px;
+}
+
+.status-badge {
+    flex-grow: 1;
+    flex-shrink: 1;
+    height: 24px;
+    min-height: 24px;
+    align-self: center;
+    border-radius: 3px;
+    justify-content: center;
+    align-items: center;
+}
+
+.status-text {
+    font-size: var(--font-size-xs);
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+}
+
+.lock-badge {
+    flex-grow: 1;
+    flex-shrink: 1;
+    height: 24px;
+    min-height: 24px;
+    align-self: center;
+    background-color: rgba(155, 55, 40, 0.941);
+    border-radius: var(--radius-sm);
+    justify-content: center;
+    align-items: center;
+    padding: 0 6px;
+}
+
+.lock-text {
+    font-size: var(--font-size-xs);
+    -unity-font-style: bold;
+    color: rgb(255, 242, 235);
+    -unity-text-align: middle-center;
+}
+
+/* Dislikes is flavor text, capped at 2 lines so it never pushes the
+   button down. */
+.card-dislikes {
+    font-size: var(--font-size-sm);
+    color: var(--color-ink-medium);
+    white-space: normal;
+    flex-shrink: 0;
+    max-height: 40px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-overflow-position: end;
+    margin-bottom: 6px;
+}
+
+/* Spacer eats remaining vertical room so .card-btn-wrap pins to the
+   bottom of the fixed card. */
+.card-spacer {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+.card-btn-wrap {
+    padding: 0;
+    flex-shrink: 0;
+}
+
+/* Card CTA. Sizing/transitions inherited from .btn .btn--lg .btn--secondary
+   in StaffCard.uxml; this rule is the legacy color/sizing fallback. */
+.btn-open-profile {
+    min-height: var(--control-h-lg);
+    height: var(--control-h-lg);
+    background-color: var(--color-btn-secondary);
+    color: var(--color-btn-secondary-text);
+    -unity-font-style: bold;
+    font-size: var(--font-size-md);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+}
+
+/* ===================================================================
+   DOSSIER
+   =================================================================== */
+
+.detail-color-banner {
+    height: 2px;
+    flex-shrink: 0;
+    background-color: var(--color-id-default);
+    opacity: 0.55;
+}
+
+.detail-folder-tab {
+    display: none;
+}
+
+.detail-body {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+    padding: var(--space-3) var(--space-4) var(--space-3);
+    flex-direction: column;
+}
+
+.detail-header-row {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: var(--space-2);
+    flex-shrink: 0;
+}
+
+/* Portrait + flip-preview live in a single column so they hug each other
+   and the identity column starts cleanly to their right. */
+.portrait-column {
+    flex-direction: column;
+    align-items: center;
+    margin-right: 14px;
+    flex-shrink: 0;
+}
+
+.portrait-wrap {
+    width: 126px;
+    min-height: 186px;
+    height: 186px;
+    background-color: var(--color-paper-card);
+    padding: 6px 6px 14px;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+/* Slight rotation sells the "polaroid pinned to a folder" feel and adds
+   asymmetry that the dossier was previously missing. The shadow class
+   handles the 1px paper offset shadow. */
+.portrait-wrap--tilted {
+    rotate: -1.5deg;
+}
+
+/* Second tape strip at the bottom-right of the portrait for asymmetry. */
+.portrait-tape--bottom {
+    top: auto;
+    bottom: -10%;
+    left: auto;
+    right: 6%;
+    rotate: 22deg;
+    width: 44px;
+    height: 38px;
+    opacity: var(--decor-opacity-strong);
+}
+
+/* "When Flipped" inset under the dossier portrait. Hidden on locked / empty
+   detail. Uses the existing angry sprite for the NPC; mounted by C#. */
+.portrait-shadow {
+    position: absolute;
+    left: 2px;
+    right: -4px;
+    top: 1px;
+    bottom: -3px;
+    background-color: var(--color-shadow-soft);
+}
+
+.portrait {
+    flex-grow: 1;
+    background-color: var(--color-id-default);
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.portrait-tape {
+    position: absolute;
+    left: 50%;
+    top: -5%;
+    width: 50px;
+    height: 46px;
+    translate: -50% 0;
+    rotate: -40deg;
+    background-image: resource('UI/Clipboard/tape_strip');
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: 0.75;
+}
+
+.identity-col {
+    flex-grow: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.detail-name-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 4px;
+}
+
+.detail-name {
+    font-size: var(--font-size-display);
+    -unity-font-style: bold;
+    color: var(--color-ink);
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: var(--space-2);
+    -unity-text-align: middle-left;
+    letter-spacing: 0.5px;
+}
+
+.detail-role {
+    font-size: var(--font-size-md);
+    color: var(--color-ink-muted);
+    margin-bottom: var(--space-1);
+    white-space: normal;
+}
+
+.detail-difficulty {
+    font-size: var(--font-size-md);
+    -unity-font-style: bold;
+    color: var(--color-difficulty-medium);
+    -unity-text-align: middle-right;
+    flex-shrink: 0;
+    min-width: 72px;
+}
+
+.detail-personality {
+    font-size: var(--font-size-md);
+    -unity-font-style: italic;
+    color: var(--color-handwritten);
+    white-space: normal;
+    margin-bottom: var(--space-2);
+}
+
+.detail-status-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 26px;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+.detail-status-badge {
+    min-width: 112px;
+    min-height: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    justify-content: center;
+    align-items: center;
+    padding: 0 6px;
+}
+
+.detail-lock-banner {
+    background-color: rgba(155, 55, 40, 0.941);
+    min-height: 30px;
+    border-radius: var(--radius-sm);
+    justify-content: center;
+    align-items: center;
+    padding: 2px 8px;
+    margin-top: 4px;
+}
+
+.detail-lock-text {
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    color: rgb(255, 242, 235);
+    -unity-text-align: middle-center;
+    letter-spacing: 1px;
+}
+
+/* Two-column dossier body. Right column gets slightly more weight than
+   left because TRIGGERS (the actionable hero) lives there. */
+.info-row {
+    flex-direction: row;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+    margin-top: var(--space-1);
+}
+
+.info-left-col {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    flex-direction: column;
+    margin-right: var(--space-4);
+    min-width: 0;
+}
+
+.info-right-col {
+    flex-grow: 1.25;
+    flex-shrink: 1;
+    flex-basis: 0;
+    flex-direction: column;
+    min-width: 0;
+    padding-right: var(--space-1);
+}
+
+.info-section-header {
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    color: var(--color-ink-muted);
+    margin-bottom: var(--space-1);
+    margin-top: var(--space-2);
+    letter-spacing: 1.5px;
+}
+
+.red-pen { color: var(--color-red-pen); }
+
+.info-body {
+    font-size: var(--font-size-md);
+    color: var(--color-ink-medium);
+    white-space: normal;
+    margin-bottom: var(--space-2);
+}
+
+/* Likes/Dislikes in the left column are flavor text. Demoted (smaller,
+   italic, lower contrast) so the player does not mistake them for valid
+   sabotage routes - the actionable triggers live in the right column. */
+.info-flavor {
+    font-size: var(--font-size-sm);
+    -unity-font-style: italic;
+    color: var(--color-ink-medium);
+    white-space: normal;
+    margin-bottom: var(--space-2);
+}
+
+.info-flavor-note {
+    font-size: var(--font-size-xs);
+    -unity-font-style: italic;
+    color: var(--color-ink-subtle);
+    margin-top: var(--space-2);
+    margin-bottom: 0;
+    white-space: normal;
+    -unity-text-align: middle-left;
+}
+
+/* ===================================================================
+   DOSSIER - TRIGGERS CHIPS
+   =================================================================== */
+
+/* Triggers section is the right column's hero block: actionable list of
+   sabotage signals the player must fire. Driven by ClipboardPresenter
+   .BuildTaskRows() so it stays in sync with progress. */
+.detail-triggers-header {
+    margin-top: 0;
+    margin-bottom: 0;
+    color: var(--color-ink-medium);
+    letter-spacing: 1.5px;
+}
+
+.detail-triggers-list {
+    flex-direction: column;
+    margin-bottom: 0;
+}
+
+/* Each chip = one sabotage task. Padding is generous on the y-axis so
+   long labels that wrap to two lines still read as one slot, and the
+   left identity stripe mirrors the row-marker pattern on the HUD
+   roster cards. */
+.trigger-chip {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-2);
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    border-left-width: 4px;
+    border-left-color: var(--color-id-default);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-top-color: var(--border-paper-soft);
+    border-right-color: var(--border-paper-soft);
+    border-bottom-color: var(--border-paper-soft);
+    background-color: var(--color-paper-card);
+    min-height: 38px;
+}
+
+.trigger-chip-icon {
+    width: 26px;
+    height: 26px;
+    margin-right: var(--space-3);
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.trigger-chip-icon--hidden {
+    display: none;
+}
+
+.trigger-chip-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-ink-strong);
+    flex-grow: 1;
+    flex-shrink: 1;
+    white-space: normal;
+    -unity-text-align: middle-left;
+}
+
+.trigger-chip-status {
+    font-size: var(--font-size-xs);
+    -unity-font-style: bold;
+    margin-left: var(--space-2);
+    padding: 4px 12px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    color: rgb(255, 255, 255);
+    background-color: var(--color-status-locked);
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+    letter-spacing: 1px;
+    min-width: 56px;
+}
+
+.trigger-chip--done .trigger-chip-status {
+    background-color: var(--color-status-active);
+}
+
+.trigger-chip--pending .trigger-chip-status {
+    background-color: rgb(155, 110, 50);
+}
+
+.trigger-chip--done .trigger-chip-label {
+    color: var(--color-ink-subtle);
+}
+
+/* ===================================================================
+   DOSSIER - SECTION RHYTHM
+   The right column groups its content into TWO visually distinct
+   blocks: TRIGGERS (hero, with stamp banner) and CASE NOTES
+   (objective inset). The left column carries the personality block
+   plus the HUNCH callout. Each block sits on a faint paper-tint
+   surface so the rhythm reads at a glance.
+
+   Whereabouts/Daily Routine was retired since NPCs don't move yet -
+   .dossier-section--whereabouts and .info-location / .info-schedule
+   were removed along with the supporting C# field bindings.
+   =================================================================== */
+
+.dossier-section {
+    flex-direction: column;
+    margin-bottom: var(--space-3);
+    padding: var(--space-4) var(--space-4) var(--space-3);
+    background-color: var(--surface-paper-card-soft);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-soft);
+    border-right-color: var(--border-paper-soft);
+    border-top-color: var(--border-paper-soft);
+    border-bottom-color: var(--border-paper-soft);
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+}
+
+/* TRIGGERS is the dossier's hero - actionable list. Slightly stronger
+   tint and a "TO DO" red-pen stamp pull the eye here first. */
+.dossier-section--triggers {
+    background-color: var(--surface-paper-card-tint);
+    border-left-width: 3px;
+    border-left-color: var(--color-red-pen);
+    padding-bottom: var(--space-2);
+}
+
+/* Personality block in the left column. Padding is slightly tighter
+   horizontally to leave room for the bullet hanging indent that
+   ClipboardPresenter.BuildBulletList renders. */
+.dossier-section--personality {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+}
+
+.dossier-section-banner {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--space-3);
+}
+
+.dossier-section-stamp {
+    color: var(--color-red-pen);
+    -unity-font-style: bold;
+    font-size: var(--font-size-xs);
+    letter-spacing: 3px;
+    padding: 3px 10px;
+    margin-right: var(--space-3);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: var(--color-red-pen);
+    border-right-color: var(--color-red-pen);
+    border-top-color: var(--color-red-pen);
+    border-bottom-color: var(--color-red-pen);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    rotate: -3deg;
+    -unity-text-align: middle-center;
+}
+
+.dossier-section-title {
+    color: var(--color-ink-strong);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    margin-bottom: var(--space-2);
+}
+
+/* HUNCH callout in the left column - replaces the bare info-hint and
+   gives the player a clearly-labeled tip card. */
+.dossier-callout {
+    flex-direction: column;
+    margin-top: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background-color: var(--surface-postit-yellow-soft);
+    border-left-width: 3px;
+    border-left-color: rgba(180, 145, 30, 0.6);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    rotate: 0.5deg;
+}
+
+.dossier-callout-label {
+    color: var(--color-ink-strong);
+    font-size: var(--font-size-xs);
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    margin-bottom: var(--space-1);
+}
+
+.detail-objective-block {
+    margin-top: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background-color: var(--surface-paper-card-tint);
+    border-left-width: 3px;
+    border-left-color: var(--border-board-trim-strong);
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+}
+
+.detail-objective-header {
+    margin-top: 0;
+    margin-bottom: var(--space-1);
+    color: var(--color-ink-medium);
+    letter-spacing: 1.5px;
+}
+
+.detail-objective-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-ink-medium);
+    white-space: normal;
+}
+
+.red-underline {
+    align-self: stretch;
+    width: 100%;
+    height: 2px;
+    background-color: var(--color-red-pen);
+    flex-shrink: 0;
+    margin-top: var(--space-1);
+    margin-bottom: var(--space-2);
+}
+
+/* Info hint is now the body text inside the .dossier-callout (HUNCH).
+   Tuned to read as handwritten ink-on-paper rather than another
+   section paragraph. */
+.info-hint {
+    font-size: var(--font-size-sm);
+    -unity-font-style: italic;
+    color: var(--color-ink-strong);
+    white-space: normal;
+    margin-bottom: 0;
+}
+
+/* ===================================================================
+   PROGRESS PANEL
+   Compact checklist layout (matches HUD rage roster rhythm).
+   One stats strip, one staff sheet, one objective inset at bottom.
+   =================================================================== */
+
+.progress-body {
+    flex-grow: 1;
+    padding: 4px 20px 10px;
+    flex-direction: column;
+}
+
+.progress-title {
+    margin-bottom: var(--space-2);
+}
+
+.progress-stats {
+    flex-shrink: 0;
+    flex-direction: column;
+    margin-bottom: var(--space-2);
+}
+
+.progress-stat-label {
+    font-size: var(--font-size-md);
+    -unity-font-style: bold;
+    color: var(--color-ink-strong);
+    margin-bottom: var(--space-1);
+}
+
+.progress-overall-track {
+    margin-bottom: var(--space-2);
+}
+
+.progress-security-row {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.progress-security-caption {
+    font-size: var(--font-size-xs);
+    -unity-font-style: bold;
+    color: var(--color-ink-medium);
+    letter-spacing: 1px;
+    margin-right: var(--space-2);
+    min-width: 88px;
+}
+
+.progress-security-pct {
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    color: var(--color-ink-strong);
+    margin-right: var(--space-2);
+    min-width: 36px;
+    -unity-text-align: middle-right;
+}
+
+.progress-security-track {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 120px;
+    height: 10px;
+}
+
+.progress-sheet {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 80px;
+    flex-direction: column;
+    padding: var(--space-2) var(--space-3) var(--space-2);
+    margin-bottom: var(--space-2);
+    background-color: var(--surface-paper-card-soft);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-soft);
+    border-right-color: var(--border-paper-soft);
+    border-top-color: var(--border-paper-soft);
+    border-bottom-color: var(--border-paper-soft);
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+}
+
+.progress-sheet-label {
+    font-size: var(--font-size-xs);
+    -unity-font-style: bold;
+    color: var(--color-ink-medium);
+    letter-spacing: 2px;
+    margin-bottom: var(--space-1);
+}
+
+.progress-list {
+    flex-grow: 1;
+    min-height: 60px;
+    background-color: transparent;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+.progress-objective-block {
+    flex-shrink: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.progress-next-action {
+    font-size: var(--font-size-sm);
+    -unity-font-style: italic;
+    color: var(--color-ink-medium);
+    white-space: normal;
+    margin-top: var(--space-1);
+}
+
+/* ----- Compact staff row (HUD roster pattern) ----- */
+
+.progress-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 5px 6px 5px 5px;
+    margin-bottom: 4px;
+    background-color: var(--color-paper-card);
+    border-left-width: 3px;
+    border-left-color: var(--border-board-trim);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-top-color: var(--border-paper-soft);
+    border-right-color: var(--border-paper-soft);
+    border-bottom-color: var(--color-rule-line);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.progress-row--flipped {
+    background-color: rgba(255, 215, 200, 0.95);
+    border-left-color: var(--color-status-flipped);
+}
+
+.progress-row--locked {
+    opacity: 0.72;
+    border-left-color: var(--color-status-locked);
+}
+
+.progress-row-thumb {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    margin-right: 8px;
+    background-color: var(--color-paper-card);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-ink-mute);
+    border-right-color: var(--border-ink-mute);
+    border-top-color: var(--border-ink-mute);
+    border-bottom-color: var(--border-ink-mute);
+    border-top-left-radius: 17px;
+    border-top-right-radius: 17px;
+    border-bottom-left-radius: 17px;
+    border-bottom-right-radius: 17px;
+    -unity-background-scale-mode: scale-to-fit;
+    overflow: hidden;
+}
+
+.progress-row-thumb--hot {
+    border-left-color: var(--color-rage-high);
+    border-right-color: var(--color-rage-high);
+    border-top-color: var(--color-rage-high);
+    border-bottom-color: var(--color-rage-high);
+}
+
+.progress-row-thumb--flipped {
+    border-left-color: var(--color-status-flipped);
+    border-right-color: var(--color-status-flipped);
+    border-top-color: var(--color-status-flipped);
+    border-bottom-color: var(--color-status-flipped);
+}
+
+.progress-row-thumb--locked {
+    border-left-color: var(--color-status-locked);
+    border-right-color: var(--color-status-locked);
+    border-top-color: var(--color-status-locked);
+    border-bottom-color: var(--color-status-locked);
+    opacity: 0.6;
+}
+
+.progress-row-body {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.progress-row-top {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.progress-row-name {
+    color: var(--color-ink-strong);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    flex-grow: 1;
+    flex-shrink: 1;
+    -unity-text-align: middle-left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.progress-row-chip {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    background-color: var(--color-status-active);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    padding: 2px 6px;
+    margin-left: 6px;
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+}
+
+.progress-row-chip--calm     { background-color: var(--color-status-active); }
+.progress-row-chip--agitated { background-color: rgb(180, 130, 40); }
+.progress-row-chip--hot      { background-color: var(--color-rage-high); }
+.progress-row-chip--flipped  { background-color: var(--color-status-flipped); }
+.progress-row-chip--locked   { background-color: var(--color-status-locked); }
+
+.progress-task-strip {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.progress-task-pip {
+    width: 8px;
+    height: 8px;
+    margin-right: 4px;
+    background-color: rgba(78, 58, 36, 0.18);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(78, 58, 36, 0.32);
+    border-right-color: rgba(78, 58, 36, 0.32);
+    border-top-color: rgba(78, 58, 36, 0.32);
+    border-bottom-color: rgba(78, 58, 36, 0.32);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.progress-task-pip--done {
+    background-color: var(--color-status-active);
+    border-left-color: rgba(38, 28, 18, 0.45);
+    border-right-color: rgba(38, 28, 18, 0.45);
+    border-top-color: rgba(38, 28, 18, 0.45);
+    border-bottom-color: rgba(38, 28, 18, 0.45);
+}
+
+.progress-row-bar-track {
+    width: 100%;
+    height: 9px;
+}
+
+/* progress-bar-track / progress-bar-fill / security-fill compose with
+   .bar-track + .bar-fill in UXML; legacy fallbacks below. */
+.progress-bar-track {
+    height: 14px;
+    background-color: rgb(220, 215, 205);
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    border-bottom-left-radius: 7px;
+    border-bottom-right-radius: 7px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-medium);
+    border-right-color: var(--border-paper-medium);
+    border-top-color: var(--border-paper-medium);
+    border-bottom-color: var(--border-paper-medium);
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background-color: var(--color-status-active);
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    border-bottom-left-radius: 7px;
+    border-bottom-right-radius: 7px;
+    transition-property: width;
+    transition-duration: var(--motion-medium);
+}
+
+.security-track { height: 12px; }
+.security-fill  { background-color: rgb(200, 130, 45); }
+
+/* ===================================================================
+   MAP PANEL
+   =================================================================== */
+
+.map-body {
+    flex-grow: 1;
+    padding: 14px 18px;
+    flex-direction: column;
+}
+
+.map-section-title {
+    font-size: var(--font-size-xl);
+    -unity-font-style: bold;
+    color: var(--color-ink);
+    margin-bottom: 10px;
+}
+
+.map-placeholder-msg {
+    font-size: var(--font-size-md);
+    -unity-font-style: italic;
+    color: var(--color-ink-medium);
+    white-space: normal;
+    margin-bottom: var(--space-4);
+}
+
+.post-it-note {
+    width: 240px;
+    min-height: 88px;
+    align-self: flex-start;
+    background-color: var(--surface-postit-yellow);
+    padding: 14px 14px 12px 14px;
+    rotate: -2.2deg;
+    overflow: visible;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-medium);
+    border-right-color: var(--border-paper-medium);
+    border-top-color: var(--border-paper-medium);
+    border-bottom-color: var(--border-paper-medium);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+}
+
+.post-it-shadow {
+    position: absolute;
+    left: 2px;
+    right: -4px;
+    top: 1px;
+    bottom: -3px;
+    background-color: var(--color-shadow-soft);
+}
+
+.post-it-pin {
+    position: absolute;
+    left: 50%;
+    top: -8px;
+    width: 28px;
+    height: 28px;
+    translate: -50% 0;
+    rotate: 8deg;
+    background-image: resource('UI/Clipboard/push_pin');
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.post-it-text {
+    font-size: var(--font-size-md);
+    color: var(--color-ink);
+    white-space: normal;
+    -unity-font-style: italic;
+}
+
+/* Map placeholder uses a stack of two notes for visual interest. The
+   stack itself is a row with a small gap; wrappers add per-note
+   rotation/offset so the template root stays generic. */
+.map-sticky-stack {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-top: var(--space-3);
+}
+
+.map-sticky {
+    flex-shrink: 0;
+}
+
+.map-sticky--chaos {
+    margin-right: -32px;
+    rotate: -3deg;
+    margin-top: 0;
+}
+
+.map-sticky--todo {
+    rotate: 4deg;
+    margin-top: 22px;
+}
+
+.map-sticky--todo .post-it-note {
+    background-color: rgb(195, 230, 255);
+}
+
+/* ===================================================================
+   QUIT POPUP (deprecated - retired in Phase 4b-2 in favor of PauseMenu)
+
+   Rules kept as thin aliases on the new modal primitives so any
+   straggling UXML/code that still references these classes renders
+   correctly via .modal-dimmer / .modal-card / .btn variants.
+   =================================================================== */
+
+.quit-popup {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--color-dimmer-soft);
+}
+
+.quit-popup-card {
+    min-width: var(--modal-min-w);
+    max-width: 420px;
+    background-color: var(--color-paper);
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
+    border-bottom-left-radius: var(--radius-xl);
+    border-bottom-right-radius: var(--radius-xl);
+    border-left-width: 3px;
+    border-right-width: 3px;
+    border-top-width: 3px;
+    border-bottom-width: 3px;
+    border-left-color: var(--color-board);
+    border-right-color: var(--color-board);
+    border-top-color: var(--color-board);
+    border-bottom-color: var(--color-board);
+    padding: var(--space-5) var(--space-5);
+    flex-direction: column;
+    align-items: center;
+}
+
+.quit-popup-title {
+    font-size: var(--font-size-section);
+    -unity-font-style: bold;
+    color: var(--color-ink);
+    margin-bottom: var(--space-2);
+}
+
+.quit-popup-msg {
+    font-size: var(--font-size-sm);
+    -unity-font-style: italic;
+    color: var(--color-ink-medium);
+    margin-bottom: var(--space-4);
+    -unity-text-align: upper-center;
+}
+
+.quit-popup-actions {
+    flex-direction: row;
+    width: 100%;
+}
+
+/* .btn-pause is a legacy class. New code should use .btn directly with
+   one of the variant modifiers; rules here just keep the old class
+   functional inside the deprecated quit-popup. */
+.btn-pause {
+    flex-grow: 1;
+    min-height: var(--control-h-lg);
+    height: var(--control-h-lg);
+    margin-left: var(--space-2);
+    margin-right: var(--space-2);
+}
+
+.btn-resume {
+    background-color: var(--color-btn-resume-bg);
+    color: var(--color-ink-strong);
+}
+
+.btn-quit {
+    background-color: var(--color-btn-quit-bg);
+    color: var(--color-btn-quit-text);
+}
+
+/* ===================================================================
+   CLIPBOARD HINT (bottom-left key prompt)
+   =================================================================== */
+
+.clipboard-hint {
+    position: absolute;
+    left: 22px;
+    bottom: 18px;
+    width: 88px;
+    height: 122px;
+    padding: 8px 6px 10px;
+    border-radius: var(--radius-xl);
+    background-color: rgba(248, 244, 235, 0.9);
+    border-width: 1px;
+    border-color: rgba(90, 72, 52, 0.38);
+    justify-content: flex-end;
+    align-items: center;
+    -unity-text-outline-width: 0;
+
+    opacity: 0;
+    translate: 0 10px;
+
+    transition-property: opacity, translate;
+    transition-duration: var(--motion-medium), var(--motion-medium);
+    transition-timing-function: ease-out, ease-out;
+}
+
+.clipboard-hint-icon {
+    width: 56px;
+    height: 74px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    background-image: resource('UI/Clipboard/clipboard_clip');
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: 0.95;
+}
+
+.clipboard-hint-key {
+    min-width: 56px;
+    min-height: 28px;
+    border-radius: var(--radius-md);
+    border-width: 1px;
+    border-color: rgba(90, 72, 52, 0.35);
+    background-color: rgba(255, 252, 246, 0.92);
+    color: rgb(48, 38, 28);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/* ===================================================================
+   MAIN MENU (board reused as title screen)
+   =================================================================== */
+
+.main-menu-paper-content { overflow: visible; }
+
+.main-menu-header {
+    top: 10px;
+    height: 268px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.main-menu-title-image {
+    position: absolute;
+    left: 48px;
+    right: 48px;
+    top: 42px;
+    height: 200px;
+    -unity-background-scale-mode: scale-to-fit;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.main-menu-header .subtitle {
+    position: absolute;
+    left: 48px;
+    right: 48px;
+    bottom: 6px;
+}
+
+.main-menu-title-fallback {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    top: 56px;
+    font-size: var(--font-size-display);
+    letter-spacing: 2px;
+}
+
+.main-menu-top-rule    { top: 288px; }
+.main-menu-bottom-rule { bottom: 48px; }
+
+.main-menu-body.content {
+    top: 300px;
+    bottom: 52px;
+    padding: 16px 28px 8px 28px;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.main-menu-tagline {
+    font-size: var(--font-size-lg);
+    -unity-font-style: italic;
+    color: var(--color-ink-medium);
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.main-menu-helper {
+    margin-top: var(--space-3);
+    font-size: var(--font-size-sm);
+    color: var(--color-ink-muted);
+    -unity-font-style: italic;
+    -unity-text-align: middle-center;
+    letter-spacing: 0.5px;
+}
+
+.main-menu-footer {
+    justify-content: center;
+    align-items: stretch;
+}
+
+.main-menu-footer .footer-btn {
+    flex-grow: 0;
+    min-width: 180px;
+    max-width: 320px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+/* Bigger, more prominent CTA than the surrounding nav buttons. The
+   tab-green background keeps the "fresh sticky-tab" association
+   that already runs through the clipboard tabs. */
+.main-menu-start-btn {
+    min-width: 250px;
+    font-size: var(--font-size-lg);
+    background-color: var(--color-tab-green);
+    color: var(--color-ink-strong);
+}
+
+.main-menu-quit-btn {
+    background-color: var(--color-board);
+    color: var(--color-paper-card);
+}

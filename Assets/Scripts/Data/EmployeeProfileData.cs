@@ -65,7 +65,7 @@ namespace OfficeFlipOut.Data
         public EmployeeDifficultyTier DifficultyTier;
         public bool StartsLocked;
         public bool RequiresAllCoworkersFlipped;
-        public List<EmployeeScheduleSeed> Schedule = new List<EmployeeScheduleSeed>();
+        // Schedules deferred: removed from profile seeds for now
     }
 
     [CreateAssetMenu(menuName = "Office Flip Out/Employee Profile", fileName = "EmployeeProfile")]
@@ -128,24 +128,8 @@ namespace OfficeFlipOut.Data
             likes = seed.Likes != null ? new List<string>(seed.Likes) : new List<string>();
             dislikes = seed.Dislikes != null ? new List<string>(seed.Dislikes) : new List<string>();
 
+            // Leave scheduleBlocks empty for now; schedule feature deferred.
             scheduleBlocks = new List<EmployeeScheduleBlock>();
-            if (seed.Schedule != null)
-            {
-                for (int i = 0; i < seed.Schedule.Count; i++)
-                {
-                    EmployeeScheduleSeed scheduleSeed = seed.Schedule[i];
-                    if (scheduleSeed == null)
-                    {
-                        continue;
-                    }
-
-                    scheduleBlocks.Add(new EmployeeScheduleBlock(
-                        scheduleSeed.Label,
-                        scheduleSeed.Location,
-                        scheduleSeed.StartHour,
-                        scheduleSeed.EndHour));
-                }
-            }
         }
     }
 }

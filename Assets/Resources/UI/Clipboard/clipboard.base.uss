@@ -1,0 +1,436 @@
+/* ===================================================================
+   Office Flip Out - Clipboard BASE
+   Shell, board, paper, ruled lines, header, rules, footer, decorations,
+   tabs, panel containers, and the toolkit root. Component-specific
+   styles live in clipboard.components.uss; state/animation toggles
+   live in clipboard.states.uss.
+   =================================================================== */
+
+.toolkit-root {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+/* ---- Shell ---- */
+
+.clipboard-shell {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
+}
+
+.dimmer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: var(--color-dimmer);
+    transition-property: opacity;
+    transition-duration: var(--motion-medium);
+}
+
+/* ---- Board ---- */
+
+.board-shadow {
+    position: absolute;
+    left: 8px;
+    top: 10px;
+    right: -8px;
+    bottom: -10px;
+    background-color: var(--color-shadow-strong);
+    border-radius: var(--radius-lg);
+}
+
+.board {
+    width: 1480px;
+    height: 920px;
+    background-color: var(--color-board);
+    border-radius: var(--radius-lg);
+    flex-direction: column;
+    overflow: visible;
+    flex-shrink: 0;
+
+    transition-property: translate, scale, opacity;
+    transition-duration: var(--motion-slow);
+    transition-timing-function: ease-out;
+}
+
+.board-face {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    top: 4px;
+    bottom: 4px;
+    background-color: var(--color-board-face);
+    border-radius: var(--radius-md);
+}
+
+/* ---- Paper ---- */
+
+.paper {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 14px;
+    bottom: 14px;
+    background-color: var(--color-paper);
+    overflow: hidden;
+}
+
+.paper-content {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    top: 10px;
+    bottom: 10px;
+}
+
+/* ---- Ruled Lines & Margin ---- */
+
+.ruled-lines {
+    position: absolute;
+    left: 76px;
+    right: 76px;
+    top: 0;
+    bottom: 0;
+}
+
+.ruled-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--color-ruled-line);
+}
+
+.margin-line {
+    position: absolute;
+    left: 74px;
+    width: 5px;
+    top: 68px;
+    bottom: 48px;
+    background-color: var(--color-margin-line);
+}
+
+/* ---- Header ---- */
+
+.header {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 68px;
+    height: 56px;
+    justify-content: center;
+    align-items: center;
+}
+
+.title {
+    font-size: var(--font-size-title);
+    -unity-font-style: bold;
+    color: var(--color-ink);
+    -unity-text-align: middle-center;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    font-size: var(--font-size-lg);
+    -unity-font-style: italic;
+    color: var(--color-ink-medium);
+    -unity-text-align: middle-center;
+    margin-top: 2px;
+}
+
+/* ---- Rules ---- */
+
+.top-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 130px;
+    height: 1px;
+    background-color: var(--color-rule-line);
+}
+
+.bottom-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 48px;
+    height: 1px;
+    background-color: var(--color-rule-line);
+}
+
+.dashed-line {
+    height: 1px;
+    flex-shrink: 0;
+    background-color: var(--color-rule-line);
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+/* ---- Content & Panels ---- */
+
+.content {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 136px;
+    /* Extra breathing room so dossier sections never feel clipped by footer. */
+    bottom: 60px;
+}
+
+.panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    flex-direction: column;
+}
+
+/* ---- Decorations ---- */
+
+.clipboard-clip {
+    position: absolute;
+    left: 50%;
+    top: -100px;
+    width: 108px;
+    height: 160px;
+    translate: -50% 0;
+    background-image: resource('UI/Clipboard/clipboard_clip');
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.tape-strip {
+    position: absolute;
+    -unity-background-scale-mode: scale-to-fit;
+    background-image: resource('UI/Clipboard/tape_strip');
+    opacity: 0.75;
+}
+
+.tape-top-left {
+    left: 76px;
+    top: 68px;
+    width: 65px;
+    height: 60px;
+    translate: -50% -50%;
+    rotate: -35deg;
+}
+
+.tape-bottom-right {
+    right: 76px;
+    bottom: 44px;
+    width: 60px;
+    height: 55px;
+    translate: 50% 50%;
+    rotate: 30deg;
+}
+
+.coffee-ring {
+    position: absolute;
+    right: 100px;
+    bottom: 130px;
+    width: 140px;
+    height: 140px;
+    rotate: 14deg;
+    background-image: resource('UI/Clipboard/coffee_ring');
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: 0.22;
+}
+
+.board-paper-clip {
+    position: absolute;
+    right: -26px;
+    top: 110px;
+    width: 105px;
+    height: 42px;
+    rotate: -15deg;
+    background-image: resource('UI/Clipboard/paper_clip');
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.push-pin {
+    position: absolute;
+    top: -8px;
+    width: 28px;
+    height: 28px;
+    background-image: resource('UI/Clipboard/push_pin');
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.push-pin-card {
+    left: 50%;
+    top: -4px;
+    width: 22px;
+    height: 22px;
+    translate: -50% 0;
+    rotate: -4deg;
+}
+
+/* ---- Tabs ---- */
+
+.sticky-tabs {
+    position: absolute;
+    left: var(--space-2);
+    right: var(--space-2);
+    top: var(--space-4);
+    height: 48px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: stretch;
+}
+
+.sticky-tab-root {
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    margin-left: var(--space-2);
+    margin-right: var(--space-2);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+
+    transition-property: background-color, opacity;
+    transition-duration: 100ms;
+}
+
+.tab-shadow {
+    position: absolute;
+    left: 1px;
+    right: 1px;
+    top: 3px;
+    bottom: 0;
+    background-color: var(--color-shadow-medium);
+    border-radius: var(--radius-md);
+}
+
+.sticky-tab-btn {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    color: var(--color-ink-strong);
+    -unity-font-style: bold;
+    font-size: var(--font-size-lg);
+    letter-spacing: 1px;
+    -unity-text-align: middle-center;
+}
+
+.tab-yellow { background-color: var(--color-tab-yellow); }
+.tab-green  { background-color: var(--color-tab-green); }
+.tab-blue   { background-color: var(--color-tab-blue); }
+
+/* ---- Footer ---- */
+
+.footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 44px;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+/* Sizing/coloring for .footer-btn now inherits from the .btn primitive
+   via the .btn .btn--lg classes added directly to footer buttons in
+   UXML. This rule keeps only the cross-screen footer-specific bits
+   (colors live with the variant; this is the legacy default). */
+.footer-btn {
+    min-height: var(--control-h-lg);
+    height: var(--control-h-lg);
+    background-color: var(--color-btn-primary);
+    color: var(--color-btn-primary-text);
+    -unity-font-style: bold;
+    font-size: var(--font-size-md);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+}
+
+.footer-btn-back {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-width: 128px;
+    margin-left: 2px;
+    margin-right: 6px;
+    background-color: var(--color-btn-secondary);
+}
+
+.footer-btn-nav   { flex-grow: 0.7; margin-left: 4px; margin-right: 4px; }
+
+.footer-btn-close {
+    flex-grow: 0;
+    flex-shrink: 0;
+    margin-left: auto;
+    margin-right: 8px;
+    min-width: 168px;
+    max-width: 260px;
+}
+
+.footer-counter-wrap {
+    flex-grow: 1;
+    justify-content: center;
+    align-items: center;
+}
+
+.page-counter {
+    font-size: var(--font-size-md);
+    -unity-font-style: italic;
+    color: var(--color-ink-medium);
+    -unity-text-align: middle-center;
+    letter-spacing: 0.5px;
+}
+
+/* ---- Quit corner button (deprecated - use Esc / pause menu) ---- */
+
+.quit-corner-btn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: var(--control-h-md);
+    height: var(--control-h-md);
+    border-top-left-radius: var(--radius-pill);
+    border-top-right-radius: var(--radius-pill);
+    border-bottom-left-radius: var(--radius-pill);
+    border-bottom-right-radius: var(--radius-pill);
+    background-color: var(--color-btn-danger);
+    color: var(--color-btn-danger-text);
+    -unity-font-style: bold;
+    font-size: var(--font-size-md);
+    -unity-text-align: middle-center;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgb(140, 40, 35);
+    border-right-color: rgb(140, 40, 35);
+    border-top-color: rgb(140, 40, 35);
+    border-bottom-color: rgb(140, 40, 35);
+}
+
+/* ---- Input polish ----
+
+   Focus ring is now defined globally in primitives.uss so keyboard
+   users can see what's focused (the previous "border-width: 0" zero-out
+   was an accessibility regression). Per-screen overrides should NOT
+   strip the focus ring; tune the focus token instead. */

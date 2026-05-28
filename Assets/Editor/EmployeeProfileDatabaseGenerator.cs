@@ -17,6 +17,7 @@ public static class EmployeeProfileDatabaseGenerator
         EnsureFolderExists("Assets/Resources", "EmployeeProfiles");
 
         List<EmployeeProfileSeed> seeds = GddEmployeeSeeds.CreateDefaultSeeds();
+        HashSet<string> expectedProfileAssetPaths = new HashSet<string>();
         List<EmployeeProfileData> generatedProfiles = new List<EmployeeProfileData>(seeds.Count);
 
         for (int i = 0; i < seeds.Count; i++)
@@ -29,6 +30,7 @@ public static class EmployeeProfileDatabaseGenerator
 
             string profileName = GetSafeFileName(!string.IsNullOrWhiteSpace(seed.NpcId) ? seed.NpcId : "Employee_" + i.ToString());
             string profileAssetPath = ProfilesFolderPath + "/" + profileName + ".asset";
+            expectedProfileAssetPaths.Add(profileAssetPath);
 
             EmployeeProfileData profile = AssetDatabase.LoadAssetAtPath<EmployeeProfileData>(profileAssetPath);
             if (profile == null)
@@ -41,6 +43,8 @@ public static class EmployeeProfileDatabaseGenerator
             EditorUtility.SetDirty(profile);
             generatedProfiles.Add(profile);
         }
+
+        RemoveStaleGeneratedProfiles(expectedProfileAssetPaths);
 
         EmployeeProfileDatabase database = AssetDatabase.LoadAssetAtPath<EmployeeProfileDatabase>(DatabaseAssetPath);
         if (database == null)
@@ -57,6 +61,21 @@ public static class EmployeeProfileDatabaseGenerator
         Selection.activeObject = database;
 
         Debug.Log("[EmployeeProfileDatabaseGenerator] Regenerated HR clipboard NPC data from GDD seeds.", database);
+    }
+
+    private static void RemoveStaleGeneratedProfiles(HashSet<string> expectedProfileAssetPaths)
+    {
+        string[] profileGuids = AssetDatabase.FindAssets("t:EmployeeProfileData", new[] { ProfilesFolderPath });
+        for (int i = 0; i < profileGuids.Length; i++)
+        {
+            string profileAssetPath = AssetDatabase.GUIDToAssetPath(profileGuids[i]);
+            if (string.IsNullOrWhiteSpace(profileAssetPath) || expectedProfileAssetPaths.Contains(profileAssetPath))
+            {
+                continue;
+            }
+
+            AssetDatabase.DeleteAsset(profileAssetPath);
+        }
     }
 
     private static void EnsureFolderExists(string parentFolder, string folderName)

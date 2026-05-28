@@ -1,13 +1,26 @@
 using UnityEngine;
 using OfficeFlipOut.UI;
 using OfficeFlipOut.Systems;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 public class MouseLook : MonoBehaviour
 {
-    public float mouseSensitivity = 100f;
+    [Tooltip("Degrees per pixel of mouse movement. Input System delta is already per-frame.")]
+    [Range(0.01f, 0.5f)]
+    public float lookSensitivity = 0.1f;
     public Transform playerBody;
 
     float xRotation = 0f;
+
+    void Awake()
+    {
+        if (lookSensitivity > 1f)
+        {
+            lookSensitivity = 0.1f;
+        }
+    }
 
     void Start()
     {
@@ -44,16 +57,23 @@ public class MouseLook : MonoBehaviour
             Cursor.visible = false;
         }
 
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        float mouseX = 0f;
+        float mouseY = 0f;
+#if ENABLE_INPUT_SYSTEM
+        Mouse mouse = Mouse.current;
+        if (mouse != null)
+        {
+            Vector2 lookDelta = mouse.delta.ReadValue();
+            mouseX = lookDelta.x * lookSensitivity;
+            mouseY = lookDelta.y * lookSensitivity;
+        }
+#endif
 
-        // Vertical rotation (look up/down)
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
         transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
 
-        // Horizontal rotation (turn player left/right)
         playerBody.Rotate(Vector3.up * mouseX);
     }
 }

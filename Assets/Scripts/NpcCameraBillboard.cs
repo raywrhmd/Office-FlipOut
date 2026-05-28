@@ -22,7 +22,10 @@ public class NpcCameraBillboard : MonoBehaviour
 
     private void LateUpdate()
     {
-        ResolvePlayerTarget();
+        if (playerTarget == null && autoFindPlayerTarget)
+        {
+            ResolvePlayerTarget();
+        }
         if (playerTarget == null)
         {
             return;

@@ -1,0 +1,288 @@
+/* ===================================================================
+   Office Flip Out - Pause / Settings menu
+   Pause card is a miniature manila clipboard. Buttons, modal dimmer,
+   field rows, and section titles all come from primitives.uss; this
+   sheet only owns the pause-specific board chrome (clip, tape, paper
+   sizing) and the spacing rhythm between title/subtitle/settings/
+   actions.
+
+   Layout:
+     pause-root             flex centered, full-screen
+     pause-dimmer           absolute backdrop
+     pause-card pause-board flex column, brown frame, auto-height
+       pause-board-shadow   absolute drop shadow behind board
+       pause-clip           absolute clip sticking out of top
+       pause-paper          flex column, paper surface, padding,
+                            holds title -> rule -> settings -> actions
+   =================================================================== */
+
+.pause-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    transition-property: opacity;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+    opacity: 1;
+}
+
+.pause-root--hidden {
+    display: none;
+    opacity: 0;
+}
+
+.pause-dimmer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-dimmer);
+}
+
+/* ----- Manila clipboard board (auto-height) -----
+
+   The board IS the brown frame: it owns padding so the paper child
+   floats inside on a wood-tone border. Width is bounded so the
+   labels in the field rows have predictable wrap, but height is
+   dictated by content with caps for very small viewports. */
+
+.pause-board {
+    flex-direction: column;
+    align-items: stretch;
+    background-color: var(--color-board);
+    padding: 6px;
+    min-width: 460px;
+    max-width: 560px;
+    width: 92%;
+    min-height: 360px;
+    max-height: 92%;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+    overflow: visible;
+    transition-property: scale, opacity, translate;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+}
+
+.pause-board-shadow {
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    right: -6px;
+    bottom: -8px;
+    background-color: var(--shadow-modal);
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+}
+
+/* Top metal clip sticks above the board (overflow:visible on .pause-board
+   lets it draw outside the frame). Slightly smaller than the main
+   clipboard's clip so the proportions read as "miniature folder". */
+.pause-clip {
+    position: absolute;
+    left: 50%;
+    top: -46px;
+    width: 72px;
+    height: 96px;
+    translate: -50% 0;
+    background-image: resource('UI/Clipboard/clipboard_clip');
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* The paper itself: flex container so children stack naturally and the
+   buttons get pushed to the bottom by the spacer-style flex math. */
+.pause-paper {
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: stretch;
+    background-color: var(--color-paper);
+    padding: 22px 26px 18px 26px;
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+/* Decorative tape strip top-right - small, slight rotation. Absolute so
+   it doesn't displace any content. */
+.pause-tape {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    width: 48px;
+    height: 42px;
+    rotate: 18deg;
+    opacity: var(--decor-opacity-strong);
+}
+
+.pause-title {
+    color: var(--color-ink-strong);
+    font-size: var(--font-size-display);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 4px;
+    margin-bottom: 2px;
+    flex-shrink: 0;
+}
+
+.pause-subtitle {
+    color: var(--color-ink-muted);
+    font-size: var(--font-size-sm);
+    -unity-text-align: middle-center;
+    -unity-font-style: italic;
+    margin-bottom: var(--space-3);
+    white-space: normal;
+    flex-shrink: 0;
+}
+
+.pause-rule {
+    height: 1px;
+    background-color: var(--color-rule-line);
+    margin-bottom: var(--space-2);
+    flex-shrink: 0;
+}
+
+/* Settings host is a ScrollView so future tall settings (or accessibility
+   text scaling) keeps the pause card on-screen. flex-shrink:1 lets the
+   actions row hold its full size while the scroll area absorbs the
+   remaining space. max-height keeps the card from looking unbalanced. */
+.pause-settings-host {
+    flex-direction: column;
+    align-items: stretch;
+    flex-shrink: 1;
+    flex-grow: 0;
+    margin-bottom: var(--space-2);
+    max-height: 360px;
+}
+
+/* Hide the scroll content viewport border that ScrollView ships with so
+   the settings panel reads as plain paper. */
+.pause-settings-host > .unity-scroll-view__content-viewport,
+.pause-settings-host .unity-scroll-view__content-container {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* Compact field rhythm specific to the pause card so 4 rows fit without
+   feeling cramped. Wider control area gives sliders room to breathe. */
+.pause-settings-host .field-row {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.pause-settings-host .field-label {
+    font-size: var(--font-size-sm);
+}
+
+.pause-settings-host .field-control {
+    min-width: 200px;
+    max-width: 240px;
+}
+
+/* Section titles inside the pause panel run smaller than the global
+   primitives default so the three sections (Audio/Gameplay/Accessibility)
+   don't over-dominate the row content.
+
+   Unity USS doesn't support :first-child, so SettingsPanelView tags the
+   FIRST section title with .section-title--first to zero its top margin. */
+.pause-settings-host .section-title {
+    font-size: var(--font-size-sm);
+    color: var(--color-ink-muted);
+    letter-spacing: 1.5px;
+    margin-top: var(--space-3);
+    margin-bottom: 2px;
+}
+
+.pause-settings-host .section-title.section-title--first { margin-top: 0; }
+
+/* ----- Pause actions (button stack pinned to the bottom) -----
+
+   Unity USS doesn't support :first-child either, so the .pause-btn--first
+   modifier is added in UXML to the first button in the stack to zero its
+   top margin. The remaining buttons inherit the 6px stack gap. */
+
+.pause-actions {
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: var(--space-2);
+    flex-shrink: 0;
+}
+
+.pause-btn {
+    margin-top: 6px;
+}
+
+.pause-btn.pause-btn--first {
+    margin-top: 0;
+}
+
+/* The .pause-btn--primary / --secondary / --danger color slots now come
+   from .btn--resume / .btn--secondary / .btn--ghost / .btn--danger via
+   the variant classes in UXML. The legacy color rules below are kept
+   only as a safety net in case any UXML still references them
+   without the matching .btn--variant. */
+
+.pause-btn--primary {
+    background-color: var(--color-btn-resume-bg);
+    color: var(--color-ink-strong);
+}
+
+.pause-btn--secondary {
+    background-color: var(--color-btn-secondary);
+    color: var(--color-btn-secondary-text);
+}
+
+.pause-btn--danger {
+    background-color: var(--color-btn-danger);
+    color: var(--color-btn-danger-text);
+}
+
+/* ---------- Settings rows (deprecated - use .field-* primitives) ----------
+
+   Kept as aliases so any older UXML referencing .settings-row /
+   .settings-row-label / .settings-row-control / .settings-section-title
+   keeps rendering. New code should use .field-row / .field-label /
+   .field-control / .section-title from primitives.uss. SettingsPanelView
+   now adds BOTH class names so both selectors hit the element. */
+
+.settings-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.settings-row-label {
+    color: var(--color-ink-medium);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.settings-row-control {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-width: 200px;
+    max-width: 240px;
+}
+
+.settings-section-title {
+    color: var(--color-ink-muted);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    margin-top: var(--space-3);
+    margin-bottom: 2px;
+}
+
+.settings-section-title.section-title--first { margin-top: 0; }

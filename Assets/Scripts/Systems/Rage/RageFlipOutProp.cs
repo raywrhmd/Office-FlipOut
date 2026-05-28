@@ -8,9 +8,6 @@ public class RageFlipOutProp : MonoBehaviour
     [Header("Listening")]
     [SerializeField, Min(0f)] private float reactionCooldown = 0.1f;
 
-    [Header("Physics Safety")]
-    [SerializeField] private bool forceDynamicPhysicsOnEnable = true;
-
     [Header("Funny Physics")]
     [SerializeField] private Vector2 extraUpImpulseRange = new Vector2(0.5f, 2f);
     [SerializeField] private Vector2 torqueMultiplierRange = new Vector2(0.7f, 1.6f);
@@ -28,6 +25,7 @@ public class RageFlipOutProp : MonoBehaviour
     private bool isReacting;
     private float lastReactionTime = -999f;
     private Coroutine reactionRoutine;
+    private bool hasInitializedPhysics;
 
     private void Awake()
     {
@@ -36,13 +34,20 @@ public class RageFlipOutProp : MonoBehaviour
             targetRigidbody = GetComponent<Rigidbody>();
         }
 
-        EnsureDynamicPhysicsState();
+        // Don't initialize physics immediately - wait for first frame or scene setup
+        hasInitializedPhysics = false;
     }
 
     private void OnEnable()
     {
-        EnsureDynamicPhysicsState();
         RageSignalHub.FlipOutBlastRaised += HandleFlipOutBlast;
+        
+        // Defer physics state setup to next frame to avoid flying props on scene load
+        if (!hasInitializedPhysics)
+        {
+            hasInitializedPhysics = true;
+            // Physics will be ensured on first FixedUpdate or when needed
+        }
     }
 
     private void OnDisable()
@@ -72,6 +77,15 @@ public class RageFlipOutProp : MonoBehaviour
         if (Time.time < lastReactionTime + reactionCooldown)
         {
             return;
+        }
+
+        // Ensure rigidbody is in dynamic state before applying forces
+        EnsureDynamicPhysicsState();
+        
+        // Unlock if this prop was locked at start
+        if (TryGetComponent<KinematicAtStart>(out KinematicAtStart kinematicStart))
+        {
+            kinematicStart.UnlockPhysics();
         }
 
         float triggerRadius = blastData.Radius;
@@ -149,7 +163,14 @@ public class RageFlipOutProp : MonoBehaviour
 
     private void EnsureDynamicPhysicsState()
     {
-        if (!forceDynamicPhysicsOnEnable || targetRigidbody == null)
+        if (targetRigidbody == null)
+        {
+            return;
+        }
+
+        // Don't force dynamic if this object has KinematicAtStart component
+        // Let KinematicAtStart control the initial state
+        if (GetComponent<KinematicAtStart>() != null)
         {
             return;
         }

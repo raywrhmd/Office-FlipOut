@@ -2,70 +2,111 @@ using System.Collections.Generic;
 
 namespace OfficeFlipOut.Data
 {
+    /// <summary>
+    /// Default GDD-derived seed data for every NPC in the game.
+    /// Order here is the canonical authoring order: easiest tier first,
+    /// then mid, advanced, and the final boss. Runtime consumers
+    /// (clipboard directory, HUD roster, objective lookup) all funnel
+    /// through <see cref="EmployeeProfileDatabase.GetProfiles"/>, which
+    /// re-sorts by (DifficultyTier, DisplayName) so this list also
+    /// dictates the editor-inspector and re-generator output order.
+    /// Each NPC's <c>SabotageHint</c> / <c>Likes</c> / <c>Dislikes</c>
+    /// must mirror the signals consumed by <see cref="Systems.ProgressTracker"/>
+    /// for that NpcId; please update both sides when adding triggers.
+    /// </summary>
     public static class GddEmployeeSeeds
     {
         public static List<EmployeeProfileSeed> CreateDefaultSeeds()
         {
             return new List<EmployeeProfileSeed>
             {
+                // --- Intro tier --------------------------------------------------
+                // Brutus: only 2 triggers, both spatially obvious - cake near
+                // him and the filing cabinet on his route. Used as the tutorial
+                // coworker.
                 new EmployeeProfileSeed
                 {
-                    NpcId = "npc_1",
-                    DisplayName = "Sandra Cain",
-                    Role = "Coworker",
-                    ColorIdentity = "Purple",
-                    PersonalitySummary = "Style-obsessed and image-conscious. She cracks when her desk gets messy or the office smells off.",
-                    SabotageHint = "Spill a drink near her desk, microwave fish in her path, or steal one of her desk props.",
-                    DifficultyTier = EmployeeDifficultyTier.Mid,
-                    Likes = new List<string> { "Clean aesthetics", "Fresh office scent", "Orderly desk space" },
-                    Dislikes = new List<string> { "Spilled drinks", "Microwave fish", "Desk props going missing" },
-                    Schedule = new List<EmployeeScheduleSeed>
-                    {
-                        new EmployeeScheduleSeed { Label = "Planning", Location = "Desk Row B", StartHour = 8f, EndHour = 10f },
-                        new EmployeeScheduleSeed { Label = "Kitchen Pass", Location = "Microwave Zone", StartHour = 10f, EndHour = 11f },
-                        new EmployeeScheduleSeed { Label = "Client Prep", Location = "Meeting Area", StartHour = 11f, EndHour = 15f },
-                        new EmployeeScheduleSeed { Label = "Desk Wrap", Location = "Desk Row B", StartHour = 15f, EndHour = 17f }
-                    }
-                },
-                new EmployeeProfileSeed
-                {
-                    NpcId = "npc_2",
+                    NpcId = NpcIds.Brutus,
                     DisplayName = "Brutus Stragenoff",
                     Role = "Coworker",
                     ColorIdentity = "Red",
                     PersonalitySummary = "Short fuse, strong opinions, and a desk setup he expects to stay perfect.",
                     SabotageHint = "Bring birthday cake near him, then knock over his filing cabinet.",
                     DifficultyTier = EmployeeDifficultyTier.Intro,
-                    Likes = new List<string> { "Quiet workspace", "Perfectly organized filing cabinet", "Everything in its place" },
-                    Dislikes = new List<string> { "Birthday cake", "Filing cabinet disorder", "People touching his desk" },
-                    Schedule = new List<EmployeeScheduleSeed>
+                    Likes = new List<string>
                     {
-                        new EmployeeScheduleSeed { Label = "Desk Grind", Location = "Desk Row A", StartHour = 8f, EndHour = 11f },
-                        new EmployeeScheduleSeed { Label = "Coffee Run", Location = "Break Room", StartHour = 11f, EndHour = 12f },
-                        new EmployeeScheduleSeed { Label = "Desk Grind", Location = "Desk Row A", StartHour = 12f, EndHour = 17f }
+                        "Quiet workspace",
+                        "Perfectly organized filing cabinet",
+                        "Everything in its place"
+                    },
+                    Dislikes = new List<string>
+                    {
+                        "Birthday cake near him",
+                        "Filing cabinet disorder",
+                        "People touching his desk"
                     }
                 },
+
+                // --- Mid tier ----------------------------------------------------
+                // Sandra: 3 desk-area sabotages (spill / fish / steal). Teaches
+                // the player to combine kitchen + desk routes.
                 new EmployeeProfileSeed
                 {
-                    NpcId = "npc_3",
+                    NpcId = NpcIds.Sandra,
+                    DisplayName = "Sandra Cain",
+                    Role = "Coworker",
+                    ColorIdentity = "Purple",
+                    PersonalitySummary = "Style-obsessed and image-conscious. She cracks when her desk gets messy or the office smells off.",
+                    SabotageHint = "Spill a drink near her desk, microwave fish in her path, and steal one of her desk props.",
+                    DifficultyTier = EmployeeDifficultyTier.Mid,
+                    Likes = new List<string>
+                    {
+                        "Clean aesthetics",
+                        "Fresh office scent",
+                        "Orderly desk space"
+                    },
+                    Dislikes = new List<string>
+                    {
+                        "Spilled drinks near her desk",
+                        "Microwaved fish",
+                        "Desk props going missing"
+                    }
+                },
+
+                // --- Advanced tier -----------------------------------------------
+                // Tommy: 3 environmental sabotages spread across the office
+                // (projectile / loud noise / unplugged gadgets). Required
+                // signals: HitNpcWithProjectile, MakeLoudNoise, UnplugDevice.
+                new EmployeeProfileSeed
+                {
+                    NpcId = NpcIds.Tommy,
                     DisplayName = "Tom T. Thomson",
                     Role = "Coworker",
                     ColorIdentity = "Green/Blue",
-                    PersonalitySummary = "Laid back, hard to annoy, and happiest when his workspace stays quiet and powered.",
-                    SabotageHint = "Hit him with any thrown object, blast loud noise near his chill zone, and unplug his comfort gear.",
+                    PersonalitySummary = "Laid back until something hits him, the office gets loud, or his comfort gear stops working. Then he loses his cool fast.",
+                    SabotageHint = "Throw something at him, make loud noise on his route, and unplug his comfort gear.",
                     DifficultyTier = EmployeeDifficultyTier.Advanced,
-                    Likes = new List<string> { "Low stress", "Clean air", "Quiet corners", "Charged devices" },
-                    Dislikes = new List<string> { "Projectiles", "Loud noise", "Unplugged fan, monitor, or lava lamp" },
-                    Schedule = new List<EmployeeScheduleSeed>
+                    Likes = new List<string>
                     {
-                        new EmployeeScheduleSeed { Label = "Deep Work", Location = "Back Desk", StartHour = 8f, EndHour = 12f },
-                        new EmployeeScheduleSeed { Label = "Smoke Patrol", Location = "Hallway", StartHour = 12f, EndHour = 13f },
-                        new EmployeeScheduleSeed { Label = "Deep Work", Location = "Back Desk", StartHour = 13f, EndHour = 17f }
+                        "Low stress",
+                        "Quiet corners",
+                        "Charged devices"
+                    },
+                    Dislikes = new List<string>
+                    {
+                        "Things thrown at him",
+                        "Loud noise on his route",
+                        "Unplugged fan, monitor, or lava lamp"
                     }
                 },
+
+                // --- Final tier --------------------------------------------------
+                // Da Boss: starts locked, unlocks once every coworker has
+                // flipped. Single objective: trigger him after the office is
+                // already in chaos.
                 new EmployeeProfileSeed
                 {
-                    NpcId = "boss_1",
+                    NpcId = NpcIds.Boss,
                     DisplayName = "Da Boss",
                     Role = "Final Obstacle",
                     ColorIdentity = "Executive Black",
@@ -74,13 +115,17 @@ namespace OfficeFlipOut.Data
                     DifficultyTier = EmployeeDifficultyTier.Final,
                     StartsLocked = true,
                     RequiresAllCoworkersFlipped = true,
-                    Likes = new List<string> { "Order", "Control", "Quiet office floor" },
-                    Dislikes = new List<string> { "Open chaos", "Visible insubordination", "Total disruption" },
-                    Schedule = new List<EmployeeScheduleSeed>
+                    Likes = new List<string>
                     {
-                        new EmployeeScheduleSeed { Label = "Executive Round", Location = "Boss Office", StartHour = 9f, EndHour = 12f },
-                        new EmployeeScheduleSeed { Label = "Floor Sweep", Location = "Main Office", StartHour = 13f, EndHour = 15f },
-                        new EmployeeScheduleSeed { Label = "Lockdown", Location = "Boss Office", StartHour = 15f, EndHour = 18f }
+                        "Order",
+                        "Control",
+                        "A quiet office floor"
+                    },
+                    Dislikes = new List<string>
+                    {
+                        "Open chaos",
+                        "Visible insubordination",
+                        "Total office disruption"
                     }
                 }
             };

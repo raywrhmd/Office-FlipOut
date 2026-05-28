@@ -1,0 +1,46 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <!--
+      Reusable employee card. Strict slot anatomy with FIXED dimensions
+      (320x460) so portraits/buttons line up across every card regardless
+      of name length, sprite proportions, or status text.
+
+      Layout (top -> bottom):
+        color strip      -> identity color
+        card-header-row  -> name + difficulty pill (reserved height)
+        card-role        -> single-line role
+        card-portrait    -> fixed 220px square; rage badge absolute top-right
+        card-status-slot -> fixed 28px slot; holds status OR lock badge
+        card-dislikes    -> max 2 lines, ellipsised
+        card-spacer      -> flex-grow:1, pushes button to bottom
+        card-btn-wrap    -> pinned to bottom of card
+    -->
+    <ui:VisualElement class="staff-card">
+        <ui:VisualElement class="card-shadow"/>
+        <ui:VisualElement name="ColorStrip" class="card-color-strip"/>
+        <ui:VisualElement class="card-inner">
+            <ui:VisualElement class="card-header-row">
+                <ui:Label name="Name" class="card-name" text="—"/>
+                <ui:Label name="Difficulty" class="card-difficulty" text=""/>
+            </ui:VisualElement>
+            <ui:Label name="Role" class="card-role" text=""/>
+            <ui:VisualElement name="Portrait" class="card-portrait">
+                <ui:VisualElement name="PortraitImage" class="card-portrait-image"/>
+                <ui:VisualElement name="RageFace" class="rage-face-badge"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="StatusSlot" class="card-status-slot">
+                <ui:VisualElement name="StatusBadge" class="status-badge status-active">
+                    <ui:Label name="StatusText" class="status-text" text="ACTIVE"/>
+                </ui:VisualElement>
+                <ui:VisualElement name="LockBadge" class="lock-badge hidden">
+                    <ui:Label name="LockText" class="lock-text" text="LOCKED"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label name="Dislikes" class="card-dislikes" text=""/>
+            <ui:VisualElement class="card-spacer"/>
+            <ui:VisualElement class="card-btn-wrap">
+                <ui:Button name="OpenProfile" class="btn btn--secondary btn--lg btn-open-profile" text="Open Dossier"/>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="push-pin push-pin-card"/>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,4 +1,5 @@
 using OfficeFlipOut.UI;
+using OfficeFlipOut.Data;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -12,10 +13,21 @@ namespace OfficeFlipOut.Systems
         public static bool IsCinematicInputLocked { get; private set; }
         public static bool IsWin { get; private set; }
         public static bool IsMainMenuOpen { get; private set; }
+        public static bool IsClipboardOpen { get; private set; }
 
         public static event Action<bool> MainMenuOpenChanged;
+        public static event Action<bool> PauseChanged;
+        public static event Action<bool> WorldFrozenChanged;
+        public static event Action<bool> WinChanged;
 
-        public static bool ShouldBlockGameplayInput => IsPaused || IsWin || IsCinematicInputLocked || IsMainMenuOpen;
+        /// <summary>
+        /// True whenever real-world gameplay simulation should be halted: includes
+        /// the main menu, win overlay, an explicit pause, or an open clipboard.
+        /// Drives Time.timeScale via <see cref="ApplyWorldTimeScale"/>.
+        /// </summary>
+        public static bool IsWorldFrozen => IsMainMenuOpen || IsWin || IsPaused || IsClipboardOpen;
+
+        public static bool ShouldBlockGameplayInput => IsPaused || IsWin || IsCinematicInputLocked || IsMainMenuOpen || IsClipboardOpen;
 
         public static void SetPaused(bool paused)
         {
@@ -28,8 +40,10 @@ namespace OfficeFlipOut.Systems
                 return;
             }
 
+            bool wasFrozen = IsWorldFrozen;
             IsPaused = paused;
-            Time.timeScale = IsPaused ? 0f : 1f;
+            ApplyWorldTimeScale(wasFrozen);
+            PauseChanged?.Invoke(IsPaused);
         }
 
         public static void SetWin(bool win)
@@ -39,17 +53,16 @@ namespace OfficeFlipOut.Systems
                 return;
             }
 
+            bool wasFrozen = IsWorldFrozen;
             IsWin = win;
             if (IsWin)
             {
                 IsMainMenuOpen = false;
                 IsPaused = false;
-                Time.timeScale = 0f;
+                IsClipboardOpen = false;
             }
-            else if (!IsPaused)
-            {
-                Time.timeScale = 1f;
-            }
+            ApplyWorldTimeScale(wasFrozen);
+            WinChanged?.Invoke(IsWin);
         }
 
         public static void SetMainMenuOpen(bool open)
@@ -59,19 +72,38 @@ namespace OfficeFlipOut.Systems
                 return;
             }
 
+            bool wasFrozen = IsWorldFrozen;
             IsMainMenuOpen = open;
             if (IsMainMenuOpen)
             {
                 IsPaused = false;
                 IsWin = false;
-                Time.timeScale = 0f;
+                IsClipboardOpen = false;
             }
-            else if (!IsPaused && !IsWin)
-            {
-                Time.timeScale = 1f;
-            }
+            ApplyWorldTimeScale(wasFrozen);
 
             MainMenuOpenChanged?.Invoke(IsMainMenuOpen);
+        }
+
+        /// <summary>
+        /// Mark the clipboard intel screen as open/closed. The clipboard is a
+        /// tactical pause: the world halts while the player reads dossiers and
+        /// progress so they're not anxious about NPCs eating the floor mid-read.
+        /// </summary>
+        public static void SetClipboardOpen(bool open)
+        {
+            if (IsWin || IsMainMenuOpen)
+            {
+                open = false;
+            }
+            if (IsClipboardOpen == open)
+            {
+                return;
+            }
+
+            bool wasFrozen = IsWorldFrozen;
+            IsClipboardOpen = open;
+            ApplyWorldTimeScale(wasFrozen);
         }
 
         public static void SetCinematicInputLocked(bool locked)
@@ -85,7 +117,18 @@ namespace OfficeFlipOut.Systems
             IsWin = false;
             IsCinematicInputLocked = false;
             IsMainMenuOpen = false;
+            IsClipboardOpen = false;
             Time.timeScale = 1f;
+        }
+
+        private static void ApplyWorldTimeScale(bool wasFrozen)
+        {
+            bool frozen = IsWorldFrozen;
+            Time.timeScale = frozen ? 0f : 1f;
+            if (frozen != wasFrozen)
+            {
+                WorldFrozenChanged?.Invoke(frozen);
+            }
         }
     }
 
@@ -95,7 +138,7 @@ namespace OfficeFlipOut.Systems
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureBootstrap()
         {
-            if (FindFirst<GameFlowController>() != null)
+            if (ProjectBootstrap.FindFirst<GameFlowController>() != null)
             {
                 return;
             }
@@ -107,20 +150,14 @@ namespace OfficeFlipOut.Systems
         [Header("Win Condition")]
         [SerializeField] private bool autoWinWhenAllCoworkersFlipped = true;
         [SerializeField] private bool autoWinWhenFinalBossFlipsOut = true;
-        [SerializeField] private string finalBossNpcSignalId = "boss_1";
-
-        [Header("Overlay")]
-        [SerializeField] private GUISkin guiSkin;
+        [SerializeField] private string finalBossNpcSignalId = NpcIds.Boss;
 
         private ProgressTracker progressTracker;
         private Rage_Meter finalBossMeter;
-        private Rect overlayRect = new Rect(0f, 0f, 580f, 320f);
-        private GUIStyle pauseTitleStyle;
-        private GUIStyle pauseBodyStyle;
 
         private void Awake()
         {
-            progressTracker = FindFirst<ProgressTracker>();
+            progressTracker = ProjectBootstrap.FindFirst<ProgressTracker>();
             if (progressTracker == null)
             {
                 progressTracker = new GameObject("ProgressTracker").AddComponent<ProgressTracker>();
@@ -269,81 +306,5 @@ namespace OfficeFlipOut.Systems
 #endif
         }
 
-        private void OnGUI()
-        {
-            if (!GameRuntimeState.IsWin)
-            {
-                return;
-            }
-
-            if (guiSkin != null)
-            {
-                GUI.skin = guiSkin;
-            }
-
-            EnsurePauseOverlayStyles();
-
-            Color previousColor = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.65f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = previousColor;
-
-            overlayRect.width = 580f;
-            overlayRect.height = 320f;
-            overlayRect.x = (Screen.width - overlayRect.width) * 0.5f;
-            overlayRect.y = (Screen.height - overlayRect.height) * 0.5f;
-
-            GUILayout.BeginArea(overlayRect, GUI.skin.window);
-            GUILayout.Space(14f);
-
-            string title = "You Win";
-            string subtitle = "The boss flipped out. Office chaos complete.";
-
-            GUILayout.Label(title, pauseTitleStyle);
-            GUILayout.Space(10f);
-            GUILayout.Label(subtitle, pauseBodyStyle);
-            GUILayout.Space(22f);
-
-            if (GUILayout.Button("Restart Game", GUILayout.Height(42f)))
-            {
-                RestartCurrentScene();
-            }
-
-            GUILayout.EndArea();
-        }
-
-        private void EnsurePauseOverlayStyles()
-        {
-            if (pauseTitleStyle != null && pauseBodyStyle != null)
-            {
-                return;
-            }
-
-            pauseTitleStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 24,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.UpperCenter,
-                wordWrap = true,
-                richText = false
-            };
-
-            pauseBodyStyle = new GUIStyle(GUI.skin.box)
-            {
-                fontSize = 16,
-                alignment = TextAnchor.UpperCenter,
-                wordWrap = true,
-                richText = false
-            };
-        }
-
-        private static T FindFirst<T>() where T : UnityEngine.Object
-        {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<T>(FindObjectsInactive.Exclude);
-#else
-            return FindObjectOfType<T>();
-#endif
-        }
     }
 }

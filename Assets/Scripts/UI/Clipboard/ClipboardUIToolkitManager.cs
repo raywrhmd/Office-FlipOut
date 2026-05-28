@@ -1,9 +1,12 @@
 using System.Collections.Generic;
-using System.Text;
 using OfficeFlipOut.Data;
 using OfficeFlipOut.Systems;
+using OfficeFlipOut.UI.Shared;
 using UnityEngine;
 using UnityEngine.UIElements;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace OfficeFlipOut.UI
 {
@@ -11,9 +14,6 @@ namespace OfficeFlipOut.UI
     [RequireComponent(typeof(UIDocument))]
     public class ClipboardUIToolkitManager : MonoBehaviour
     {
-        private const string SandraNpcId = "npc_1";
-        private const string BrutusNpcId = "npc_2";
-        private const string TommyNpcId = "npc_3";
         private const int CardsPerPage = 3;
         private const int RuledLineCount = 20;
 
@@ -27,10 +27,12 @@ namespace OfficeFlipOut.UI
         [Header("Data")]
         [SerializeField] private EmployeeProfileDatabase database;
 
-        [Header("Main Menu (Toolkit)")]
-        [Tooltip("Blaine title art; assign Assets/Art/Sprites/Blaine/title.png")]
-        [SerializeField] private Texture2D mainMenuTitleArt;
-        [SerializeField] private string mainMenuSubtitleOverride;
+        [Header("Dossier Trigger Icons (existing assets)")]
+        [Tooltip("Icon used for fish/microwave triggers. Wire to Assets/Art/Sprites/Blaine/Fish_smell_icon.png. Leave null to render as label-only chip.")]
+        [SerializeField] private Sprite fishSmellIcon;
+        [Tooltip("Icon used for loud-noise triggers. Wire to Assets/Art/Sprites/Blaine/Annyance_talk_bubble.png. Leave null to render as label-only chip.")]
+        [SerializeField] private Sprite loudNoiseIcon;
+
 
         private UIDocument uiDocument;
         private VisualElement root;
@@ -46,16 +48,7 @@ namespace OfficeFlipOut.UI
         private VisualElement board;
         private VisualElement clipboardPaper;
 
-        private VisualElement mainMenuShell;
-        private VisualElement mainMenuBoard;
-        private VisualElement mainMenuDimmer;
-        private VisualElement mainMenuTitleImage;
-        private Label mainMenuTitleFallback;
-        private Label mainMenuSubtitleLabel;
-        private Button mainMenuStart;
-        private Button mainMenuQuit;
         private VisualElement clipboardHint;
-        private bool mainMenuWired;
 
         // Tabs (3: Directory, Progress, Map)
         private VisualElement tabDirectoryRoot, tabProgressRoot, tabMapRoot;
@@ -65,6 +58,7 @@ namespace OfficeFlipOut.UI
 
         // Directory: grid + dossier drill-down (P2)
         private VisualElement directoryGridView, dossierView;
+        private VisualElement staffGrid;
         private bool dossierOpen;
 
         // Footer (P3)
@@ -74,8 +68,7 @@ namespace OfficeFlipOut.UI
         private Label pageCounterLabel;
         private VisualElement footerRow;
 
-        // Quit popup (P4)
-        private VisualElement quitPopup;
+        // (Quit popup retired in Phase 4b-2; superseded by PauseMenuController.)
 
         // Directory state
         private int pageStart;
@@ -83,7 +76,7 @@ namespace OfficeFlipOut.UI
         // Detail state
         private int selectedProfileIndex;
 
-        // Card refs (P1: added ragePips)
+        // Card refs (fixed-slot template; Location removed - lives in dossier).
         private struct CardElements
         {
             public VisualElement root;
@@ -92,11 +85,11 @@ namespace OfficeFlipOut.UI
             public Label difficultyLabel;
             public Label roleLabel;
             public VisualElement portrait;
+            public VisualElement portraitImage;
             public VisualElement rageFace;
             public VisualElement statusBadge;
             public Label statusText;
             public Label dislikesLabel;
-            public Label locationLabel;
             public VisualElement lockBadge;
             public Label lockText;
             public Button openButton;
@@ -115,15 +108,24 @@ namespace OfficeFlipOut.UI
         private Label detailDislikesHeader, detailDislikes;
         private VisualElement detailDislikesUnderline;
         private Label detailHint;
-        private Label detailLocation, detailScheduleHeader, detailSchedule;
+        // Whereabouts (DetailLocation / DetailSchedule) was retired in the
+        // dossier UX pass since NPCs don't move yet. Re-add the fields here
+        // and the matching UXML block when the location/schedule feature ships.
+        private VisualElement detailObjectiveBlock;
+        private Label detailObjectiveHeader, detailObjective;
+        private Label detailTriggersHeader;
+        private VisualElement detailTriggersList;
 
         // Progress refs (P0)
         private Label progressOverallLabel;
         private VisualElement progressOverallFill;
-        private ScrollView progressNpcList;
+        private ListView progressNpcList;
         private Label progressObjective, progressNextAction;
         private Label progressSecurityLabel;
         private VisualElement progressSecurityFill;
+        private readonly List<ProgressTracker.EmployeeProgressSnapshot> progressItemsBuffer
+            = new List<ProgressTracker.EmployeeProgressSnapshot>();
+        private bool progressListWired;
 
         private ProgressTracker progressTracker;
 
@@ -149,6 +151,9 @@ namespace OfficeFlipOut.UI
                 progressTracker.ProgressChanged -= HandleProgressTrackerChanged;
             }
             if (cursorSnapshotCaptured) RestoreCursorSnapshot();
+            // Make sure we don't leave the world frozen behind us if the
+            // controller goes away with the clipboard still considered open.
+            GameRuntimeState.SetClipboardOpen(false);
         }
 
         private void HandleProgressTrackerChanged()
@@ -174,30 +179,19 @@ namespace OfficeFlipOut.UI
         {
             if (!initialized) { TryInitialize(); if (!initialized) return; }
 
-            if (GameRuntimeState.IsMainMenuOpen)
-            {
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
-                {
-                    GameRuntimeState.SetMainMenuOpen(false);
-                    return;
-                }
-                if (Input.GetKeyDown(closeKey) || Input.GetKeyDown(KeyCode.Escape))
-                {
-                    QuitGame();
-                    return;
-                }
-                return;
-            }
+            // Main menu input is owned by MainMenuController. The clipboard
+            // simply refuses to open while the main menu is showing.
+            if (GameRuntimeState.IsMainMenuOpen) return;
 
-            if (Input.GetKeyDown(toggleKey))
+            if (IsKeyPressedThisFrame(toggleKey))
                 ClipboardUIState.SetOpen(!ClipboardUIState.IsOpen);
 
             if (!ClipboardUIState.IsOpen) return;
 
-            if (Input.GetKeyDown(closeKey)) { ClipboardUIState.SetOpen(false); return; }
-            if (Input.GetKeyDown(KeyCode.Alpha1)) ClipboardUIState.SetTab(ClipboardTab.Directory);
-            else if (Input.GetKeyDown(KeyCode.Alpha2)) ClipboardUIState.SetTab(ClipboardTab.Progress);
-            else if (Input.GetKeyDown(KeyCode.Alpha3)) ClipboardUIState.SetTab(ClipboardTab.Map);
+            if (IsKeyPressedThisFrame(closeKey)) { ClipboardUIState.SetOpen(false); return; }
+            if (IsDigitPressedThisFrame(1)) ClipboardUIState.SetTab(ClipboardTab.Directory);
+            else if (IsDigitPressedThisFrame(2)) ClipboardUIState.SetTab(ClipboardTab.Progress);
+            else if (IsDigitPressedThisFrame(3)) ClipboardUIState.SetTab(ClipboardTab.Map);
         }
 
         // ----------------------------------------------------------------
@@ -216,9 +210,8 @@ namespace OfficeFlipOut.UI
             if (shell == null) return;
 
             GenerateRuledLines();
-            GenerateMainMenuRuledLines();
+            BindMapStickyNotes();
             WireEvents();
-            WireMainMenuIfNeeded();
 
             ClipboardUIState.SetTab(ClipboardTab.Directory);
             ClipboardUIState.SetOpen(startOpen);
@@ -231,47 +224,23 @@ namespace OfficeFlipOut.UI
                 dimmer.AddToClassList("anim-hidden");
             }
 
-            ApplyMainMenuTitleArt();
-            if (!string.IsNullOrWhiteSpace(mainMenuSubtitleOverride) && mainMenuSubtitleLabel != null)
-            {
-                mainMenuSubtitleLabel.text = mainMenuSubtitleOverride;
-            }
-
-            if (mainMenuShell != null)
-            {
-                GameRuntimeState.MainMenuOpenChanged += HandleMainMenuOpenChanged;
-            }
+            // Main menu visibility flips clipboard cursor handling, so still
+            // listen for it - the menu lives in its own UIDocument now.
+            GameRuntimeState.MainMenuOpenChanged += HandleMainMenuOpenChanged;
 
             ApplyState();
-            if (mainMenuShell != null)
-            {
-                ApplyMainMenuVisibility();
-            }
         }
 
         private void ResolveReferences()
         {
             if (progressTracker == null)
-                progressTracker = FindFirst<ProgressTracker>();
+                progressTracker = ProjectBootstrap.FindFirst<ProgressTracker>();
             if (progressTracker == null)
                 progressTracker = new GameObject("ProgressTracker").AddComponent<ProgressTracker>();
 
             if (database == null)
             {
-                database = Resources.Load<EmployeeProfileDatabase>("EmployeeProfileDatabase");
-                if (database == null)
-                {
-                    database = ScriptableObject.CreateInstance<EmployeeProfileDatabase>();
-                    database.hideFlags = HideFlags.DontSave;
-                }
-#if UNITY_EDITOR
-                if (database == null)
-                {
-                    Debug.LogWarning(
-                        "[ClipboardUIToolkitManager] Assign EmployeeProfileDatabase in the inspector or add Assets/Resources/EmployeeProfileDatabase.asset (menu: Office Flip Out / Generate Default Employee Data).",
-                        this);
-                }
-#endif
+                database = ProjectBootstrap.LoadEmployeeProfileDatabase(true);
             }
 
             if (progressTracker != null)
@@ -298,6 +267,7 @@ namespace OfficeFlipOut.UI
 
             directoryGridView = root.Q<VisualElement>("DirectoryGridView");
             dossierView = root.Q<VisualElement>("DossierView");
+            staffGrid = root.Q<VisualElement>("StaffGrid");
 
             footerRow = root.Q<VisualElement>("FooterRow");
             footerBackDossier = root.Q<Button>("FooterBackDossier");
@@ -307,27 +277,25 @@ namespace OfficeFlipOut.UI
             footerCounterWrap = root.Q<VisualElement>("FooterCounterWrap");
             pageCounterLabel = root.Q<Label>("PageCounter");
 
-            quitPopup = root.Q<VisualElement>("QuitPopup");
-
             for (int i = 0; i < CardsPerPage; i++)
             {
-                string p = "Card" + i;
+                VisualElement cardRoot = root.Q<VisualElement>("Card" + i);
                 cards[i] = new CardElements
                 {
-                    root = root.Q<VisualElement>(p),
-                    colorStrip = root.Q<VisualElement>(p + "ColorStrip"),
-                    nameLabel = root.Q<Label>(p + "Name"),
-                    difficultyLabel = root.Q<Label>(p + "Difficulty"),
-                    roleLabel = root.Q<Label>(p + "Role"),
-                    portrait = root.Q<VisualElement>(p + "Portrait"),
-                    rageFace = root.Q<VisualElement>(p + "RageFace"),
-                    statusBadge = root.Q<VisualElement>(p + "StatusBadge"),
-                    statusText = root.Q<Label>(p + "StatusText"),
-                    dislikesLabel = root.Q<Label>(p + "Dislikes"),
-                    locationLabel = root.Q<Label>(p + "Location"),
-                    lockBadge = root.Q<VisualElement>(p + "LockBadge"),
-                    lockText = root.Q<Label>(p + "LockText"),
-                    openButton = root.Q<Button>("OpenProfile" + i)
+                    root = cardRoot,
+                    colorStrip = cardRoot?.Q<VisualElement>("ColorStrip"),
+                    nameLabel = cardRoot?.Q<Label>("Name"),
+                    difficultyLabel = cardRoot?.Q<Label>("Difficulty"),
+                    roleLabel = cardRoot?.Q<Label>("Role"),
+                    portrait = cardRoot?.Q<VisualElement>("Portrait"),
+                    portraitImage = cardRoot?.Q<VisualElement>("PortraitImage"),
+                    rageFace = cardRoot?.Q<VisualElement>("RageFace"),
+                    statusBadge = cardRoot?.Q<VisualElement>("StatusBadge"),
+                    statusText = cardRoot?.Q<Label>("StatusText"),
+                    dislikesLabel = cardRoot?.Q<Label>("Dislikes"),
+                    lockBadge = cardRoot?.Q<VisualElement>("LockBadge"),
+                    lockText = cardRoot?.Q<Label>("LockText"),
+                    openButton = cardRoot?.Q<Button>("OpenProfile")
                 };
             }
 
@@ -349,26 +317,20 @@ namespace OfficeFlipOut.UI
             detailDislikes = root.Q<Label>("DetailDislikes");
             detailDislikesUnderline = root.Q<VisualElement>("DetailDislikesUnderline");
             detailHint = root.Q<Label>("DetailHint");
-            detailLocation = root.Q<Label>("DetailLocation");
-            detailScheduleHeader = root.Q<Label>("DetailScheduleHeader");
-            detailSchedule = root.Q<Label>("DetailSchedule");
+            detailObjectiveBlock = root.Q<VisualElement>("DetailObjectiveBlock");
+            detailObjectiveHeader = root.Q<Label>("DetailObjectiveHeader");
+            detailObjective = root.Q<Label>("DetailObjective");
+            detailTriggersHeader = root.Q<Label>("DetailTriggersHeader");
+            detailTriggersList = root.Q<VisualElement>("DetailTriggersList");
 
             progressOverallLabel = root.Q<Label>("ProgressOverallLabel");
             progressOverallFill = root.Q<VisualElement>("ProgressOverallFill");
-            progressNpcList = root.Q<ScrollView>("ProgressNpcList");
+            progressNpcList = root.Q<ListView>("ProgressNpcList");
             progressObjective = root.Q<Label>("ProgressObjective");
             progressNextAction = root.Q<Label>("ProgressNextAction");
             progressSecurityLabel = root.Q<Label>("ProgressSecurityLabel");
             progressSecurityFill = root.Q<VisualElement>("ProgressSecurityFill");
 
-            mainMenuShell = root.Q<VisualElement>("MainMenuShell");
-            mainMenuBoard = root.Q<VisualElement>("MainMenuBoard");
-            mainMenuDimmer = root.Q<VisualElement>("MainMenuDimmer");
-            mainMenuTitleImage = root.Q<VisualElement>("MainMenuTitleImage");
-            mainMenuTitleFallback = root.Q<Label>("MainMenuTitleFallback");
-            mainMenuSubtitleLabel = root.Q<Label>("MainMenuSubtitle");
-            mainMenuStart = root.Q<Button>("MainMenuStart");
-            mainMenuQuit = root.Q<Button>("MainMenuQuit");
             clipboardHint = root.Q<VisualElement>("ClipboardHint");
         }
 
@@ -388,114 +350,33 @@ namespace OfficeFlipOut.UI
             }
         }
 
-        private void GenerateMainMenuRuledLines()
+        // Bind the two Map placeholder sticky notes (instances of the shared
+        // StickyNote.uxml template). Walking child elements rather than Q-by-name
+        // because every Instance contributes its own "StickyText" Label.
+        private void BindMapStickyNotes()
         {
-            VisualElement container = root.Q<VisualElement>("MainMenuRuledLines");
-            if (container == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < RuledLineCount; i++)
-            {
-                float yPercent = 100f * (1f - ((float)(i + 1) / (RuledLineCount + 1)));
-                VisualElement line = new VisualElement();
-                line.AddToClassList("ruled-line");
-                line.style.top = new StyleLength(new Length(yPercent, LengthUnit.Percent));
-                line.pickingMode = PickingMode.Ignore;
-                container.Add(line);
-            }
+            BindStickyNoteText("MapStickyChaos", "Stress spreads. Plan your chaos before you cause it.");
+            BindStickyNoteText("MapStickyTodo", "TODO: actual floor map. For now, the Directory tab is your map.");
         }
 
-        private void WireMainMenuIfNeeded()
+        private void BindStickyNoteText(string instanceName, string text)
         {
-            if (mainMenuWired)
-            {
-                return;
-            }
-            if (mainMenuStart != null)
-            {
-                mainMenuStart.clicked += () => GameRuntimeState.SetMainMenuOpen(false);
-            }
-            if (mainMenuQuit != null)
-            {
-                mainMenuQuit.clicked += QuitGame;
-            }
-            mainMenuWired = true;
+            VisualElement instance = root.Q<VisualElement>(instanceName);
+            if (instance == null) return;
+            Label label = instance.Q<Label>("StickyText");
+            if (label != null) label.text = text;
         }
 
         private void HandleMainMenuOpenChanged(bool _)
         {
-            ApplyMainMenuVisibility();
-        }
-
-        private void ApplyMainMenuVisibility()
-        {
-            if (!initialized || mainMenuShell == null)
-            {
-                return;
-            }
-
-            bool open = GameRuntimeState.IsMainMenuOpen;
-            if (open)
+            // Main menu lives in its own UIDocument now; we just need to make
+            // sure the clipboard closes and our cursor handling re-evaluates.
+            if (GameRuntimeState.IsMainMenuOpen)
             {
                 ClipboardUIState.SetOpen(false);
-                mainMenuShell.RemoveFromClassList("hidden");
-                if (mainMenuDimmer != null)
-                {
-                    mainMenuDimmer.RemoveFromClassList("anim-hidden");
-                }
-                if (mainMenuBoard != null)
-                {
-                    mainMenuBoard.RemoveFromClassList("anim-closed");
-                }
-                if (mainMenuStart != null)
-                {
-                    mainMenuStart.Focus();
-                }
             }
-            else
-            {
-                mainMenuShell.AddToClassList("hidden");
-                if (mainMenuDimmer != null)
-                {
-                    mainMenuDimmer.AddToClassList("anim-hidden");
-                }
-                if (mainMenuBoard != null)
-                {
-                    mainMenuBoard.AddToClassList("anim-closed");
-                }
-            }
-
             ApplyCursor(ClipboardUIState.IsOpen || GameRuntimeState.IsMainMenuOpen);
             UpdateClipboardHintVisibility();
-        }
-
-        private void ApplyMainMenuTitleArt()
-        {
-            if (mainMenuTitleImage == null)
-            {
-                return;
-            }
-
-            if (mainMenuTitleArt != null)
-            {
-                mainMenuTitleImage.style.backgroundImage = new StyleBackground(mainMenuTitleArt);
-                mainMenuTitleImage.RemoveFromClassList("hidden");
-                if (mainMenuTitleFallback != null)
-                {
-                    mainMenuTitleFallback.AddToClassList("hidden-title-fallback");
-                }
-            }
-            else
-            {
-                mainMenuTitleImage.style.backgroundImage = StyleKeyword.None;
-                mainMenuTitleImage.AddToClassList("hidden");
-                if (mainMenuTitleFallback != null)
-                {
-                    mainMenuTitleFallback.RemoveFromClassList("hidden-title-fallback");
-                }
-            }
         }
 
         // ----------------------------------------------------------------
@@ -521,10 +402,8 @@ namespace OfficeFlipOut.UI
                     cards[i].openButton.clicked += () => HandleOpenProfile(slot);
             }
 
-            // Quit popup (P4)
-            root.Q<Button>("QuitCornerBtn").clicked += () => SetVisible(quitPopup, true);
-            root.Q<Button>("QuitPopupResume").clicked += () => SetVisible(quitPopup, false);
-            root.Q<Button>("QuitPopupQuit").clicked += QuitGame;
+            // The old in-clipboard "Quit popup" / corner-X is gone. Pause and
+            // quit are now handled by PauseMenuController via Esc.
 
             dimmer.RegisterCallback<ClickEvent>(_ => ClipboardUIState.SetOpen(false));
         }
@@ -533,7 +412,14 @@ namespace OfficeFlipOut.UI
         // State Management
         // ----------------------------------------------------------------
 
-        private void HandleOpenChanged(bool isOpen) => ApplyState();
+        private void HandleOpenChanged(bool isOpen)
+        {
+            // Clipboard is a tactical pause: freeze the world while reading
+            // dossiers / progress so NPCs don't drift mid-read.
+            GameRuntimeState.SetClipboardOpen(isOpen);
+            ApplyState();
+        }
+
         private void HandleTabChanged(ClipboardTab tab) => ApplyState();
 
         private void ApplyState()
@@ -553,7 +439,6 @@ namespace OfficeFlipOut.UI
             else if (!isOpen && shellVisible)
             {
                 shellVisible = false;
-                SetVisible(quitPopup, false);
                 board.AddToClassList("anim-closed");
                 dimmer.AddToClassList("anim-hidden");
                 board.schedule.Execute(() =>
@@ -715,21 +600,51 @@ namespace OfficeFlipOut.UI
         {
             int count = database != null ? database.Count : 0;
             pageStart = ClampPageStart(pageStart, count);
+            int visibleCards = 0;
 
             for (int i = 0; i < CardsPerPage; i++)
             {
                 ref CardElements card = ref cards[i];
                 if (card.root == null) continue;
 
-                if (count == 0) { ShowCardFallback(ref card); continue; }
+                if (count == 0)
+                {
+                    // Keep one slot as an explicit empty-state card, hide the rest.
+                    if (i == 0)
+                    {
+                        ShowCardFallback(ref card);
+                        visibleCards = 1;
+                    }
+                    else
+                    {
+                        HideCardSlot(ref card);
+                    }
+                    continue;
+                }
 
                 int idx = pageStart + i;
-                if (idx < 0 || idx >= count) { ShowCardFallback(ref card); continue; }
+                if (idx < 0 || idx >= count)
+                {
+                    HideCardSlot(ref card);
+                    continue;
+                }
                 EmployeeProfileData profile = database.GetProfileAt(idx);
-                if (profile == null) { ShowCardFallback(ref card); continue; }
-                if (IsLocked(profile)) { ShowCardLocked(ref card); continue; }
+                if (profile == null)
+                {
+                    HideCardSlot(ref card);
+                    continue;
+                }
+
+                SetVisible(card.root, true);
+                visibleCards++;
+                if (ClipboardPresenter.IsLocked(profile, progressTracker))
+                {
+                    ShowCardLocked(ref card);
+                    continue;
+                }
                 ShowCardProfile(ref card, profile);
             }
+            UpdateStaffGridLayoutClass(visibleCards);
             UpdateDirectoryPageCounter();
         }
 
@@ -738,52 +653,72 @@ namespace OfficeFlipOut.UI
             card.nameLabel.text = string.IsNullOrWhiteSpace(profile.DisplayName)
                 ? "Unknown" : profile.DisplayName;
             card.roleLabel.text = profile.Role;
-            SetBackgroundColor(card.colorStrip, GetIdentityColor(profile.ColorIdentity));
-            card.difficultyLabel.text = GetDifficultyLabel(profile.DifficultyTier);
-            SetTextColor(card.difficultyLabel, GetDifficultyColor(profile.DifficultyTier));
+            SetBackgroundColor(card.colorStrip, ClipboardPresenter.GetIdentityColor(profile.ColorIdentity));
+            card.difficultyLabel.text = ClipboardPresenter.GetDifficultyLabel(profile.DifficultyTier);
+            SetTextColor(card.difficultyLabel, ClipboardPresenter.GetDifficultyColor(profile.DifficultyTier));
 
-            // P5: show up to 2 dislikes with count
-            IReadOnlyList<string> dislikes = profile.Dislikes;
-            card.dislikesLabel.text = FormatDislikeSummary(dislikes);
+            card.dislikesLabel.text = ClipboardPresenter.FormatDislikeSummary(profile.Dislikes);
 
-            card.locationLabel.text = "@ " + GetCurrentLocation(profile);
             UpdateCardStatusAndRageFace(ref card, profile.NpcId);
             SetVisible(card.lockBadge, false);
-            SetPortraitSprite(card.portrait, ResolvePortrait(profile));
+            SetPortraitSprite(card.portraitImage, ResolvePortrait(profile));
+            ApplyCardPortraitFraming(card.portraitImage, profile.NpcId);
             card.openButton.SetEnabled(true);
         }
 
         private void ShowCardLocked(ref CardElements card)
         {
-            card.nameLabel.text = "[ CLASSIFIED ]";
+            card.nameLabel.text = ClipboardPresenter.LockedNameFallback;
             card.roleLabel.text = "???";
             SetBackgroundColor(card.colorStrip, new Color32(42, 42, 48, 255));
-            card.difficultyLabel.text = "BOSS";
-            SetTextColor(card.difficultyLabel, GetDifficultyColor(EmployeeDifficultyTier.Final));
-            card.dislikesLabel.text = "Hates: ???";
-            card.locationLabel.text = "@ ???";
+            card.difficultyLabel.text = ClipboardPresenter.LockedDifficultyFallback;
+            SetTextColor(card.difficultyLabel, ClipboardPresenter.GetDifficultyColor(EmployeeDifficultyTier.Final));
+            card.dislikesLabel.text = ClipboardPresenter.LockedDislikesFallback;
             SetVisible(card.lockBadge, true);
             card.lockText.text = "LOCKED";
             SetVisible(card.statusBadge, false);
             SetVisible(card.rageFace, false);
-            SetPortraitSprite(card.portrait, null);
+            SetPortraitSprite(card.portraitImage, null);
+            ClearCardPortraitFraming(card.portraitImage);
             card.portrait.style.backgroundColor = new StyleColor(new Color32(55, 50, 46, 255));
             card.openButton.SetEnabled(false);
         }
 
         private void ShowCardFallback(ref CardElements card)
         {
+            SetVisible(card.root, true);
             card.nameLabel.text = "No Staff";
             card.roleLabel.text = "";
             SetBackgroundColor(card.colorStrip, new Color32(208, 202, 192, 255));
             card.difficultyLabel.text = "";
             card.dislikesLabel.text = "";
-            card.locationLabel.text = "";
             SetVisible(card.lockBadge, false);
             SetVisible(card.statusBadge, false);
             SetVisible(card.rageFace, false);
-            SetPortraitSprite(card.portrait, null);
+            SetPortraitSprite(card.portraitImage, null);
+            ClearCardPortraitFraming(card.portraitImage);
             card.openButton.SetEnabled(false);
+        }
+
+        private void HideCardSlot(ref CardElements card)
+        {
+            SetVisible(card.root, false);
+            card.openButton?.SetEnabled(false);
+        }
+
+        private void UpdateStaffGridLayoutClass(int visibleCards)
+        {
+            if (staffGrid == null)
+            {
+                return;
+            }
+
+            // Cards are now strictly 320x460, so no count-based width overrides
+            // are needed. Just opt the grid into a centered layout when fewer
+            // than 3 cards are visible so a lone boss card sits in the middle
+            // instead of hugging the left edge.
+            bool centered = visibleCards < 3;
+            staffGrid.EnableInClassList("staff-grid--centered", centered);
         }
 
         private void UpdateCardStatusAndRageFace(ref CardElements card, string npcId)
@@ -795,15 +730,15 @@ namespace OfficeFlipOut.UI
                 return;
             }
 
-            ProgressTracker.EmployeeProgressSnapshot snap = FindSnapshot(npcId);
-            bool flipped = snap != null && snap.isFlippedOut;
-            int rage = snap != null ? snap.currentRage : 0;
+            ProgressTracker.EmployeeProgressSnapshot snap = ClipboardPresenter.FindSnapshot(progressTracker, npcId);
+            ClipboardPresenter.NpcStatus status = ClipboardPresenter.DeriveStatus(snap, false);
 
             SetVisible(card.statusBadge, true);
-            card.statusText.text = flipped ? "FLIPPED OUT" : (rage > 0 ? "AGITATED" : "ACTIVE");
+            card.statusText.text = ClipboardPresenter.StatusLabel(status);
             card.statusBadge.RemoveFromClassList("status-active");
             card.statusBadge.RemoveFromClassList("status-flipped");
-            card.statusBadge.AddToClassList(flipped ? "status-flipped" : "status-active");
+            card.statusBadge.AddToClassList(status == ClipboardPresenter.NpcStatus.FlippedOut
+                ? "status-flipped" : "status-active");
 
             Sprite face = snap != null ? snap.rageFaceSprite : null;
             // Keep rage badge visible for all active employees to surface current emotional status.
@@ -834,13 +769,13 @@ namespace OfficeFlipOut.UI
                 ? database.GetProfileAt(selectedProfileIndex) : null;
 
             if (profile == null) { ShowDetailEmpty(); return; }
-            if (IsLocked(profile)) { ShowDetailLocked(); return; }
+            if (ClipboardPresenter.IsLocked(profile, progressTracker)) { ShowDetailLocked(); return; }
             ShowDetailFull(profile);
         }
 
         private void ShowDetailFull(EmployeeProfileData profile)
         {
-            Color32 idColor = GetIdentityColor(profile.ColorIdentity);
+            Color32 idColor = ClipboardPresenter.GetIdentityColor(profile.ColorIdentity);
             SetBackgroundColor(detailColorBanner, idColor);
             SetBackgroundColor(detailFolderTab, idColor);
             SetVisible(detailFolderTab, true);
@@ -848,28 +783,34 @@ namespace OfficeFlipOut.UI
             detailName.text = string.IsNullOrWhiteSpace(profile.DisplayName)
                 ? "Unknown Employee" : profile.DisplayName;
             detailRole.text = profile.Role + "  /  " + profile.ColorIdentity;
-            detailDifficulty.text = GetDifficultyLabel(profile.DifficultyTier);
-            SetTextColor(detailDifficulty, GetDifficultyColor(profile.DifficultyTier));
-            detailPersonality.text = FormatPersonalityQuote(profile.PersonalitySummary);
+            detailDifficulty.text = ClipboardPresenter.GetDifficultyLabel(profile.DifficultyTier);
+            SetTextColor(detailDifficulty, ClipboardPresenter.GetDifficultyColor(profile.DifficultyTier));
+            detailPersonality.text = ClipboardPresenter.FormatPersonalityQuote(profile.PersonalitySummary);
             SetVisible(detailLockBanner, false);
 
             UpdateDetailStatusBadge(profile.NpcId);
             SetPortraitSprite(detailPortrait, ResolvePortrait(profile));
 
             detailLikesHeader.text = "LIKES";
-            detailLikes.text = BuildBulletList(profile.Likes);
+            detailLikes.text = ClipboardPresenter.BuildBulletList(profile.Likes);
             detailDislikesHeader.text = "DISLIKES";
-            detailDislikes.text = BuildBulletList(profile.Dislikes);
+            detailDislikes.text = ClipboardPresenter.BuildBulletList(profile.Dislikes);
             SetVisible(detailDislikesUnderline,
                 profile.Dislikes != null && profile.Dislikes.Count > 0);
 
-            detailHint.text = string.IsNullOrWhiteSpace(profile.SabotageHint)
-                ? "Intel: watch their routine. trigger what they hate."
-                : "Intel: " + profile.SabotageHint;
+            detailHint.text = ClipboardPresenter.FormatSabotageHint(profile.SabotageHint);
 
-            detailLocation.text = "Currently @ " + GetCurrentLocation(profile);
-            detailScheduleHeader.text = "DAILY ROUTINE";
-            detailSchedule.text = BuildScheduleText(profile.ScheduleBlocks);
+            BuildTriggerChips(profile);
+
+            string nextAction = string.Empty;
+            string objective = progressTracker != null
+                ? progressTracker.GetObjectiveText(profile.NpcId, out nextAction)
+                : "No live objective feed.";
+            SetVisible(detailObjectiveBlock, true);
+            detailObjectiveHeader.text = "CASE NOTES";
+            detailObjective.text = !string.IsNullOrWhiteSpace(nextAction)
+                ? objective + "\nNext: " + nextAction
+                : objective;
         }
 
         private Sprite ResolvePortrait(EmployeeProfileData profile)
@@ -894,13 +835,13 @@ namespace OfficeFlipOut.UI
             SetBackgroundColor(detailFolderTab, dark);
             SetVisible(detailFolderTab, true);
 
-            detailName.text = "[ CLASSIFIED ]";
-            detailRole.text = "Final Obstacle";
-            detailDifficulty.text = "BOSS";
-            SetTextColor(detailDifficulty, GetDifficultyColor(EmployeeDifficultyTier.Final));
-            detailPersonality.text = "\u201COnly destabilizes after everyone else has flipped.\u201D";
+            detailName.text = ClipboardPresenter.LockedNameFallback;
+            detailRole.text = ClipboardPresenter.LockedRoleFallback;
+            detailDifficulty.text = ClipboardPresenter.LockedDifficultyFallback;
+            SetTextColor(detailDifficulty, ClipboardPresenter.GetDifficultyColor(EmployeeDifficultyTier.Final));
+            detailPersonality.text = ClipboardPresenter.LockedPersonalityQuote;
             SetVisible(detailLockBanner, true);
-            detailLockText.text = "DOSSIER LOCKED - Flip all coworkers to gain access";
+            detailLockText.text = ClipboardPresenter.LockedDossierBanner;
             SetVisible(detailStatusRow, false);
             SetPortraitSprite(detailPortrait, null);
 
@@ -909,10 +850,14 @@ namespace OfficeFlipOut.UI
             detailDislikesHeader.text = "DISLIKES";
             detailDislikes.text = "  ???";
             SetVisible(detailDislikesUnderline, false);
-            detailHint.text = "Intel: complete all coworker FLIP OUTs to unlock.";
-            detailLocation.text = "Currently @ ???";
-            detailScheduleHeader.text = "DAILY ROUTINE";
-            detailSchedule.text = "  Schedule classified.";
+            detailHint.text = ClipboardPresenter.LockedHintFallback;
+
+            ClearTriggerChips();
+            if (detailTriggersHeader != null) detailTriggersHeader.text = "";
+
+            SetVisible(detailObjectiveBlock, true);
+            detailObjectiveHeader.text = "CASE NOTES";
+            detailObjective.text = "Complete all coworker flip-outs to unlock full boss dossier.";
         }
 
         private void ShowDetailEmpty()
@@ -932,9 +877,121 @@ namespace OfficeFlipOut.UI
             detailDislikes.text = "";
             SetVisible(detailDislikesUnderline, false);
             detailHint.text = "";
-            detailLocation.text = "";
-            detailScheduleHeader.text = "";
-            detailSchedule.text = "";
+
+            ClearTriggerChips();
+            if (detailTriggersHeader != null) detailTriggersHeader.text = "";
+
+            SetVisible(detailObjectiveBlock, false);
+            detailObjectiveHeader.text = "";
+            detailObjective.text = "";
+        }
+
+        // ----------------------------------------------------------------
+        // Dossier - Triggers chip strip
+        // ----------------------------------------------------------------
+
+        private void BuildTriggerChips(EmployeeProfileData profile)
+        {
+            if (detailTriggersList == null)
+            {
+                return;
+            }
+
+            ClearTriggerChips();
+
+            if (detailTriggersHeader != null) detailTriggersHeader.text = "TRIGGERS";
+
+            ProgressTracker.EmployeeProgressSnapshot snap = profile != null && progressTracker != null
+                ? ClipboardPresenter.FindSnapshot(progressTracker, profile.NpcId)
+                : null;
+            if (snap == null)
+            {
+                AddTriggerChipPlaceholder("No live trigger data");
+                return;
+            }
+
+            List<ClipboardPresenter.TaskRow> rows = ClipboardPresenter.BuildTaskRows(snap);
+            if (rows == null || rows.Count == 0)
+            {
+                AddTriggerChipPlaceholder("No actionable triggers identified");
+                return;
+            }
+
+            Color32 idColor = ClipboardPresenter.GetIdentityColor(profile.ColorIdentity);
+            for (int i = 0; i < rows.Count; i++)
+            {
+                AddTriggerChipTo(detailTriggersList, rows[i], idColor, i == rows.Count - 1);
+            }
+        }
+
+        private void ClearTriggerChips()
+        {
+            if (detailTriggersList == null) return;
+            detailTriggersList.Clear();
+        }
+
+        private void AddTriggerChipTo(
+            VisualElement parent,
+            ClipboardPresenter.TaskRow row,
+            Color32 identityColor,
+            bool isLast = false)
+        {
+            if (parent == null) return;
+
+            VisualElement chip = new VisualElement();
+            chip.AddToClassList("trigger-chip");
+            chip.AddToClassList(row.Done ? "trigger-chip--done" : "trigger-chip--pending");
+            if (isLast) chip.AddToClassList("trigger-chip--last");
+            chip.style.borderLeftColor = new StyleColor(identityColor);
+
+            VisualElement icon = new VisualElement();
+            icon.AddToClassList("trigger-chip-icon");
+            Sprite iconSprite = ResolveTriggerIcon(row.IconKey);
+            if (iconSprite != null)
+            {
+                icon.style.backgroundImage = new StyleBackground(iconSprite);
+            }
+            else
+            {
+                icon.AddToClassList("trigger-chip-icon--hidden");
+            }
+            chip.Add(icon);
+
+            Label label = new Label(row.Label);
+            label.AddToClassList("trigger-chip-label");
+            chip.Add(label);
+
+            Label status = new Label(row.Done ? "DONE" : "TODO");
+            status.AddToClassList("trigger-chip-status");
+            chip.Add(status);
+
+            parent.Add(chip);
+        }
+
+        private void AddTriggerChipPlaceholder(string text)
+        {
+            VisualElement chip = new VisualElement();
+            chip.AddToClassList("trigger-chip");
+
+            Label label = new Label(text);
+            label.AddToClassList("trigger-chip-label");
+            chip.Add(label);
+
+            detailTriggersList.Add(chip);
+        }
+
+        private Sprite ResolveTriggerIcon(string iconKey)
+        {
+            if (string.IsNullOrEmpty(iconKey)) return null;
+            switch (iconKey)
+            {
+                case ClipboardPresenter.TriggerIconKeys.MicrowaveFish:
+                    return fishSmellIcon;
+                case ClipboardPresenter.TriggerIconKeys.MakeLoudNoise:
+                    return loudNoiseIcon;
+                default:
+                    return null;
+            }
         }
 
         private void UpdateDetailStatusBadge(string npcId)
@@ -942,7 +999,8 @@ namespace OfficeFlipOut.UI
             if (progressTracker == null) { SetVisible(detailStatusRow, false); return; }
 
             SetVisible(detailStatusRow, true);
-            bool flipped = IsNpcFlippedOut(npcId);
+            ProgressTracker.EmployeeProgressSnapshot snap = ClipboardPresenter.FindSnapshot(progressTracker, npcId);
+            bool flipped = snap != null && snap.isFlippedOut;
             detailStatusText.text = flipped ? "FLIPPED OUT" : "ACTIVE";
             detailStatusBadge.RemoveFromClassList("status-active");
             detailStatusBadge.RemoveFromClassList("status-flipped");
@@ -965,165 +1023,295 @@ namespace OfficeFlipOut.UI
             float overallPct = totalNpcs > 0 ? (float)flippedCount / totalNpcs * 100f : 0f;
             progressOverallFill.style.width = new StyleLength(new Length(overallPct, LengthUnit.Percent));
 
-            progressNpcList.Clear();
+            UpdateProgressList(snaps);
 
-            for (int i = 0; i < snaps.Count; i++)
-            {
-                ProgressTracker.EmployeeProgressSnapshot snap = snaps[i];
-                EmployeeProfileData profile = database != null
-                    ? database.GetProfileByNpcId(snap.npcId)
-                    : null;
-                bool locked = profile != null && IsLocked(profile);
-
-                VisualElement row = new VisualElement();
-                row.AddToClassList("npc-progress-row");
-
-                // Header: name + status badge
-                VisualElement header = new VisualElement();
-                header.AddToClassList("npc-progress-header");
-
-                Label nameLabel = new Label(snap.displayName);
-                nameLabel.AddToClassList("npc-progress-name");
-                header.Add(nameLabel);
-
-                Label statusLabel = new Label(
-                    locked ? "LOCKED" :
-                    snap.isFlippedOut ? "FLIPPED OUT" :
-                    snap.currentRage > 0 ? "AGITATED" : "CALM");
-                statusLabel.AddToClassList("npc-progress-status");
-                if (snap.isFlippedOut) statusLabel.AddToClassList("npc-flipped");
-                else if (locked) statusLabel.AddToClassList("npc-locked");
-
-                if (!locked)
-                {
-                    VisualElement moodGroup = new VisualElement();
-                    moodGroup.AddToClassList("npc-mood-group");
-
-                    VisualElement barTrack = new VisualElement();
-                    barTrack.AddToClassList("npc-rage-bar-track");
-                    VisualElement barFill = new VisualElement();
-                    barFill.AddToClassList("npc-rage-bar-fill");
-                    int req = snap.requiredSignals > 0 ? snap.requiredSignals : 3;
-                    float ragePct = Mathf.Clamp01((float)snap.currentRage / req) * 100f;
-                    barFill.style.width = new StyleLength(new Length(ragePct, LengthUnit.Percent));
-                    if (snap.currentRage >= req - 1) barFill.AddToClassList("rage-high");
-                    barTrack.Add(barFill);
-                    moodGroup.Add(barTrack);
-                    moodGroup.Add(statusLabel);
-                    header.Add(moodGroup);
-                }
-                else
-                {
-                    header.Add(statusLabel);
-                }
-
-                row.Add(header);
-
-                // Task checkmarks (skip for locked NPCs)
-                if (!locked)
-                {
-                    VisualElement taskRow = new VisualElement();
-                    taskRow.AddToClassList("npc-task-row");
-
-                    int taskCount = Mathf.Clamp(snap.requiredSignals, 1, snap.npcId == BrutusNpcId ? 2 : 3);
-                    if (snap.npcId == SandraNpcId)
-                    {
-                        if (taskCount >= 1)
-                        {
-                            AddTaskItem(taskRow, "Spill drink near desk", snap.spilledDrink);
-                        }
-
-                        if (taskCount >= 2)
-                        {
-                            AddTaskItem(taskRow, "Microwave fish nearby", snap.microwavedFish);
-                        }
-
-                        if (taskCount >= 3)
-                        {
-                            AddTaskItem(taskRow, "Steal desk prop", snap.tookStapler);
-                        }
-                    }
-                    else if (snap.npcId == BrutusNpcId)
-                    {
-                        if (taskCount >= 1)
-                        {
-                            AddTaskItem(taskRow, "Bring birthday cake near", snap.microwavedFish);
-                        }
-
-                        if (taskCount >= 2)
-                        {
-                            AddTaskItem(taskRow, "Knock over filing cabinet", snap.tookStapler);
-                        }
-                    }
-                    else if (snap.npcId == TommyNpcId)
-                    {
-                        if (taskCount >= 1)
-                        {
-                            AddTaskItem(taskRow, "Hit with projectile", snap.spilledDrink);
-                        }
-
-                        if (taskCount >= 2)
-                        {
-                            AddTaskItem(taskRow, "Make loud noise nearby", snap.microwavedFish);
-                        }
-
-                        if (taskCount >= 3)
-                        {
-                            AddTaskItem(taskRow, "Unplug device", snap.tookStapler);
-                        }
-                    }
-                    else
-                    {
-                        if (taskCount >= 1)
-                        {
-                            AddTaskItem(taskRow, "Spill drink", snap.spilledDrink);
-                        }
-
-                        if (taskCount >= 2)
-                        {
-                            AddTaskItem(taskRow, "Microwave fish", snap.microwavedFish);
-                        }
-
-                        if (taskCount >= 3)
-                        {
-                            AddTaskItem(taskRow, "Steal object", snap.tookStapler);
-                        }
-                    }
-                    row.Add(taskRow);
-                }
-
-                progressNpcList.Add(row);
-            }
-
-            // Objective + next action
             string nextAction;
             string objectiveText = progressTracker.GetObjectiveText(null, out nextAction);
             progressObjective.text = objectiveText;
             progressNextAction.text = !string.IsNullOrWhiteSpace(nextAction)
                 ? "Next: " + nextAction : "";
 
-            // Job security
             float security = progressTracker.GetJobSecurity01();
-            progressSecurityLabel.text = string.Format("Job Security: {0}%", Mathf.RoundToInt(security * 100f));
+            progressSecurityLabel.text = string.Format("{0}%", Mathf.RoundToInt(security * 100f));
             progressSecurityFill.style.width = new StyleLength(new Length(security * 100f, LengthUnit.Percent));
         }
 
-        private static void AddTaskItem(VisualElement parent, string taskName, bool done)
+        private void UpdateProgressList(IReadOnlyList<ProgressTracker.EmployeeProgressSnapshot> snaps)
         {
-            VisualElement item = new VisualElement();
-            item.AddToClassList("task-item");
+            if (progressNpcList == null) return;
 
-            Label check = new Label(done ? "\u2713" : "\u2717");
-            check.AddToClassList("task-check");
-            check.AddToClassList(done ? "task-done" : "task-pending");
-            item.Add(check);
+            progressItemsBuffer.Clear();
+            for (int i = 0; i < snaps.Count; i++)
+            {
+                progressItemsBuffer.Add(snaps[i]);
+            }
 
-            Label label = new Label(taskName);
-            label.AddToClassList("task-label");
-            if (done) label.AddToClassList("task-label-done");
-            item.Add(label);
+            if (!progressListWired)
+            {
+                progressListWired = true;
+                progressNpcList.itemsSource = progressItemsBuffer;
+                progressNpcList.makeItem = MakeProgressRow;
+                progressNpcList.bindItem = BindProgressRow;
+                progressNpcList.unbindItem = UnbindProgressRow;
+            }
+            else
+            {
+                progressNpcList.itemsSource = progressItemsBuffer;
+            }
 
-            parent.Add(item);
+            progressNpcList.RefreshItems();
+        }
+
+        private static VisualElement MakeProgressRow()
+        {
+            VisualElement row = new VisualElement { name = "ProgressRow" };
+            row.AddToClassList("progress-row");
+
+            VisualElement thumb = new VisualElement { name = "Thumb" };
+            thumb.AddToClassList("progress-row-thumb");
+            row.Add(thumb);
+
+            VisualElement body = new VisualElement { name = "Body" };
+            body.AddToClassList("progress-row-body");
+            row.Add(body);
+
+            VisualElement top = new VisualElement { name = "Top" };
+            top.AddToClassList("progress-row-top");
+            body.Add(top);
+
+            Label nameLabel = new Label { name = "Name" };
+            nameLabel.AddToClassList("progress-row-name");
+            top.Add(nameLabel);
+
+            Label statusChip = new Label { name = "Status" };
+            statusChip.AddToClassList("progress-row-chip");
+            top.Add(statusChip);
+
+            VisualElement taskStrip = new VisualElement { name = "TaskStrip" };
+            taskStrip.AddToClassList("progress-task-strip");
+            body.Add(taskStrip);
+
+            VisualElement barTrack = new VisualElement { name = "BarTrack" };
+            barTrack.AddToClassList("bar-track");
+            barTrack.AddToClassList("bar-track--sm");
+            barTrack.AddToClassList("progress-row-bar-track");
+            body.Add(barTrack);
+
+            VisualElement barFill = new VisualElement { name = "BarFill" };
+            barFill.AddToClassList("bar-fill");
+            barFill.AddToClassList("bar-fill--rage");
+            barFill.AddToClassList("progress-row-bar-fill");
+            barTrack.Add(barFill);
+
+            return row;
+        }
+
+        private void BindProgressRow(VisualElement row, int index)
+        {
+            if (index < 0 || index >= progressItemsBuffer.Count) return;
+            ProgressTracker.EmployeeProgressSnapshot snap = progressItemsBuffer[index];
+            if (snap == null) return;
+
+            EmployeeProfileData profile = database != null
+                ? database.GetProfileByNpcId(snap.npcId)
+                : null;
+            bool locked = profile != null && ClipboardPresenter.IsLocked(profile, progressTracker);
+            Color32 identityColor = ClipboardPresenter.GetIdentityColor(
+                profile != null ? profile.ColorIdentity : null);
+
+            Label nameLabel = row.Q<Label>("Name");
+            VisualElement thumb = row.Q<VisualElement>("Thumb");
+            VisualElement taskStrip = row.Q<VisualElement>("TaskStrip");
+            VisualElement barRow = row.Q<VisualElement>("BarTrack");
+            VisualElement barFill = row.Q<VisualElement>("BarFill");
+            Label statusChip = row.Q<Label>("Status");
+
+            row.style.borderLeftColor = new StyleColor(identityColor);
+            row.EnableInClassList("progress-row--flipped", !locked && snap.isFlippedOut);
+            row.EnableInClassList("progress-row--locked", locked);
+
+            if (nameLabel != null)
+            {
+                nameLabel.text = string.IsNullOrWhiteSpace(snap.displayName)
+                    ? snap.npcId : snap.displayName;
+            }
+
+            ClipboardPresenter.NpcStatus status = ClipboardPresenter.DeriveStatus(snap, locked);
+            int req = snap.requiredSignals > 0 ? snap.requiredSignals : 3;
+            float ratio = req > 0 ? Mathf.Clamp01((float)snap.currentRage / req) : 0f;
+            bool isHot = !locked && snap.currentRage >= req - 1 && !snap.isFlippedOut;
+
+            BindProgressThumbnail(thumb, snap, status, isHot);
+            ApplyProgressChip(statusChip, status, isHot, ratio);
+
+            if (locked)
+            {
+                SetVisible(taskStrip, false);
+                SetVisible(barRow, false);
+            }
+            else
+            {
+                SetVisible(taskStrip, true);
+                SetVisible(barRow, true);
+                BindProgressTaskPips(taskStrip, snap);
+                BindProgressBar(barFill, ratio, status, isHot);
+            }
+        }
+
+        private static void BindProgressThumbnail(
+            VisualElement thumb,
+            ProgressTracker.EmployeeProgressSnapshot snap,
+            ClipboardPresenter.NpcStatus status,
+            bool isHot)
+        {
+            if (thumb == null) return;
+            thumb.style.backgroundImage = snap.rageFaceSprite != null
+                ? new StyleBackground(snap.rageFaceSprite)
+                : new StyleBackground(StyleKeyword.None);
+
+            thumb.RemoveFromClassList("progress-row-thumb--hot");
+            thumb.RemoveFromClassList("progress-row-thumb--flipped");
+            thumb.RemoveFromClassList("progress-row-thumb--locked");
+            switch (status)
+            {
+                case ClipboardPresenter.NpcStatus.FlippedOut:
+                    thumb.AddToClassList("progress-row-thumb--flipped");
+                    break;
+                case ClipboardPresenter.NpcStatus.Locked:
+                    thumb.AddToClassList("progress-row-thumb--locked");
+                    break;
+                default:
+                    if (isHot) thumb.AddToClassList("progress-row-thumb--hot");
+                    break;
+            }
+        }
+
+        private static void BindProgressTaskPips(
+            VisualElement strip,
+            ProgressTracker.EmployeeProgressSnapshot snap)
+        {
+            if (strip == null) return;
+            List<ClipboardPresenter.TaskRow> tasks = ClipboardPresenter.BuildTaskRows(snap);
+            int desired = tasks != null ? tasks.Count : 0;
+
+            while (strip.childCount < desired)
+            {
+                VisualElement pip = new VisualElement();
+                pip.AddToClassList("progress-task-pip");
+                strip.Add(pip);
+            }
+            while (strip.childCount > desired)
+            {
+                strip.RemoveAt(strip.childCount - 1);
+            }
+
+            for (int i = 0; i < desired; i++)
+            {
+                strip[i].EnableInClassList("progress-task-pip--done", tasks[i].Done);
+            }
+        }
+
+        private static void BindProgressBar(
+            VisualElement fill,
+            float ratio,
+            ClipboardPresenter.NpcStatus status,
+            bool isHot)
+        {
+            if (fill == null) return;
+            fill.RemoveFromClassList("progress-row-bar-fill--hot");
+            fill.RemoveFromClassList("progress-row-bar-fill--flipped");
+            fill.RemoveFromClassList("progress-row-bar-fill--locked");
+
+            if (status == ClipboardPresenter.NpcStatus.FlippedOut)
+            {
+                fill.AddToClassList("progress-row-bar-fill--flipped");
+                fill.style.width = new StyleLength(new Length(100f, LengthUnit.Percent));
+                return;
+            }
+            if (status == ClipboardPresenter.NpcStatus.Locked)
+            {
+                fill.AddToClassList("progress-row-bar-fill--locked");
+            }
+            else if (isHot)
+            {
+                fill.AddToClassList("progress-row-bar-fill--hot");
+            }
+            fill.style.width = new StyleLength(new Length(ratio * 100f, LengthUnit.Percent));
+        }
+
+        private static void ApplyProgressChip(
+            Label chip,
+            ClipboardPresenter.NpcStatus status,
+            bool isHot,
+            float ratio)
+        {
+            if (chip == null) return;
+
+            chip.RemoveFromClassList("progress-row-chip--calm");
+            chip.RemoveFromClassList("progress-row-chip--agitated");
+            chip.RemoveFromClassList("progress-row-chip--hot");
+            chip.RemoveFromClassList("progress-row-chip--flipped");
+            chip.RemoveFromClassList("progress-row-chip--locked");
+
+            switch (status)
+            {
+                case ClipboardPresenter.NpcStatus.FlippedOut:
+                    chip.text = "FLIPPED";
+                    chip.AddToClassList("progress-row-chip--flipped");
+                    break;
+                case ClipboardPresenter.NpcStatus.Locked:
+                    chip.text = "LOCKED";
+                    chip.AddToClassList("progress-row-chip--locked");
+                    break;
+                case ClipboardPresenter.NpcStatus.Agitated:
+                    if (isHot)
+                    {
+                        chip.text = "HOT";
+                        chip.AddToClassList("progress-row-chip--hot");
+                    }
+                    else
+                    {
+                        chip.text = Mathf.RoundToInt(ratio * 100f) + "%";
+                        chip.AddToClassList("progress-row-chip--agitated");
+                    }
+                    break;
+                default:
+                    chip.text = "CALM";
+                    chip.AddToClassList("progress-row-chip--calm");
+                    break;
+            }
+        }
+
+        private static void UnbindProgressRow(VisualElement row, int index)
+        {
+            VisualElement barFill = row.Q<VisualElement>("BarFill");
+            if (barFill != null)
+            {
+                barFill.RemoveFromClassList("progress-row-bar-fill--hot");
+                barFill.RemoveFromClassList("progress-row-bar-fill--flipped");
+                barFill.RemoveFromClassList("progress-row-bar-fill--locked");
+            }
+
+            Label statusChip = row.Q<Label>("Status");
+            if (statusChip != null)
+            {
+                statusChip.RemoveFromClassList("progress-row-chip--calm");
+                statusChip.RemoveFromClassList("progress-row-chip--agitated");
+                statusChip.RemoveFromClassList("progress-row-chip--hot");
+                statusChip.RemoveFromClassList("progress-row-chip--flipped");
+                statusChip.RemoveFromClassList("progress-row-chip--locked");
+            }
+
+            VisualElement thumb = row.Q<VisualElement>("Thumb");
+            if (thumb != null)
+            {
+                thumb.RemoveFromClassList("progress-row-thumb--hot");
+                thumb.RemoveFromClassList("progress-row-thumb--flipped");
+                thumb.RemoveFromClassList("progress-row-thumb--locked");
+            }
+
+            row.RemoveFromClassList("progress-row--flipped");
+            row.RemoveFromClassList("progress-row--locked");
         }
 
         // ----------------------------------------------------------------
@@ -1231,168 +1419,9 @@ namespace OfficeFlipOut.UI
             cursorSnapshotCaptured = false;
         }
 
-        private void QuitGame()
-        {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
-        }
-
         // ----------------------------------------------------------------
         // Helpers
         // ----------------------------------------------------------------
-
-        private ProgressTracker.EmployeeProgressSnapshot FindSnapshot(string npcId)
-        {
-            if (progressTracker == null) return null;
-            IReadOnlyList<ProgressTracker.EmployeeProgressSnapshot> snaps = progressTracker.GetSnapshots();
-            for (int i = 0; i < snaps.Count; i++)
-            {
-                if (snaps[i].npcId == npcId)
-                    return snaps[i];
-            }
-            return null;
-        }
-
-        private bool IsNpcFlippedOut(string npcId)
-        {
-            ProgressTracker.EmployeeProgressSnapshot snap = FindSnapshot(npcId);
-            return snap != null && snap.isFlippedOut;
-        }
-
-        private bool IsLocked(EmployeeProfileData profile)
-        {
-            if (profile == null) return false;
-            bool locked = profile.StartsLocked;
-            if (locked && profile.RequiresAllCoworkersFlipped && progressTracker != null)
-                locked = !progressTracker.AreAllCoworkersFlipped(profile.NpcId);
-            return locked;
-        }
-
-        // P5: format dislikes summary for directory cards
-        private static string FormatPersonalityQuote(string summary)
-        {
-            if (string.IsNullOrWhiteSpace(summary))
-            {
-                return "\u201CNo intel on personality yet.\u201D";
-            }
-
-            return "\u201C" + summary + "\u201D";
-        }
-
-        private static string FormatDislikeSummary(IReadOnlyList<string> dislikes)
-        {
-            if (dislikes == null || dislikes.Count == 0)
-                return "Hates: nothing obvious";
-            if (dislikes.Count == 1)
-                return "Hates: " + dislikes[0];
-            if (dislikes.Count == 2)
-                return "Hates: " + dislikes[0] + ", " + dislikes[1];
-            return "Hates: " + dislikes[0] + ", " + dislikes[1] + " (+" + (dislikes.Count - 2) + " more)";
-        }
-
-        private static string GetCurrentLocation(EmployeeProfileData profile)
-        {
-            if (profile == null || profile.ScheduleBlocks == null || profile.ScheduleBlocks.Count == 0)
-                return "Unknown";
-
-            float nowHour = (Time.time / 60f) % 24f;
-            for (int i = 0; i < profile.ScheduleBlocks.Count; i++)
-            {
-                EmployeeScheduleBlock b = profile.ScheduleBlocks[i];
-                if (b != null && b.StartHour <= nowHour && nowHour < b.EndHour)
-                    return string.IsNullOrWhiteSpace(b.Location) ? "Unknown" : b.Location;
-            }
-            EmployeeScheduleBlock fb = profile.ScheduleBlocks[0];
-            return fb != null && !string.IsNullOrWhiteSpace(fb.Location)
-                ? fb.Location : "Unknown";
-        }
-
-        private static string BuildBulletList(IReadOnlyList<string> items)
-        {
-            if (items == null || items.Count == 0)
-                return "  None listed";
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < items.Count; i++)
-            {
-                sb.Append("  \u2022 ");
-                sb.AppendLine(items[i]);
-            }
-            return sb.ToString();
-        }
-
-        private static string BuildScheduleText(IReadOnlyList<EmployeeScheduleBlock> blocks)
-        {
-            if (blocks == null || blocks.Count == 0)
-                return "  No schedule data.";
-
-            float nowHour = (Time.time / 60f) % 24f;
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < blocks.Count; i++)
-            {
-                EmployeeScheduleBlock b = blocks[i];
-                if (b == null) continue;
-                bool isCurrent = b.StartHour <= nowHour && nowHour < b.EndHour;
-                sb.Append(isCurrent ? " >> " : "    ");
-                sb.AppendFormat("{0:00}:00-{1:00}:00", b.StartHour, b.EndHour);
-                sb.Append("  ");
-                sb.Append(b.Label);
-                if (!string.IsNullOrWhiteSpace(b.Location))
-                {
-                    sb.Append(" @ ");
-                    sb.Append(b.Location);
-                }
-                if (isCurrent) sb.Append("  [NOW]");
-                sb.AppendLine();
-            }
-            return sb.ToString();
-        }
-
-        private static int WrapIndex(int value, int count)
-        {
-            if (count <= 0) return 0;
-            int wrapped = value % count;
-            return wrapped < 0 ? wrapped + count : wrapped;
-        }
-
-        private static Color32 GetIdentityColor(string colorIdentity)
-        {
-            if (string.IsNullOrWhiteSpace(colorIdentity))
-                return new Color32(140, 140, 140, 255);
-            string key = colorIdentity.Trim().ToLowerInvariant();
-            if (key.Contains("purple")) return new Color32(128, 70, 160, 255);
-            if (key.Contains("red")) return new Color32(195, 60, 50, 255);
-            if (key.Contains("green") || key.Contains("blue")) return new Color32(55, 140, 130, 255);
-            if (key.Contains("black") || key.Contains("executive")) return new Color32(42, 42, 48, 255);
-            if (key.Contains("orange")) return new Color32(210, 130, 50, 255);
-            return new Color32(140, 140, 140, 255);
-        }
-
-        private static string GetDifficultyLabel(EmployeeDifficultyTier tier)
-        {
-            switch (tier)
-            {
-                case EmployeeDifficultyTier.Intro: return "EASY";
-                case EmployeeDifficultyTier.Mid: return "MEDIUM";
-                case EmployeeDifficultyTier.Advanced: return "HARD";
-                case EmployeeDifficultyTier.Final: return "BOSS";
-                default: return "";
-            }
-        }
-
-        private static Color32 GetDifficultyColor(EmployeeDifficultyTier tier)
-        {
-            switch (tier)
-            {
-                case EmployeeDifficultyTier.Intro: return new Color32(60, 130, 65, 255);
-                case EmployeeDifficultyTier.Mid: return new Color32(180, 155, 40, 255);
-                case EmployeeDifficultyTier.Advanced: return new Color32(200, 100, 35, 255);
-                case EmployeeDifficultyTier.Final: return new Color32(165, 35, 35, 255);
-                default: return new Color32(148, 132, 112, 255);
-            }
-        }
 
         private static void SetBackgroundColor(VisualElement el, Color color)
         {
@@ -1426,13 +1455,85 @@ namespace OfficeFlipOut.UI
             }
         }
 
-        private static T FindFirst<T>() where T : Object
+        private static void ApplyCardPortraitFraming(VisualElement portraitImage, string npcId)
         {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<T>(FindObjectsInactive.Exclude);
+            if (portraitImage == null)
+            {
+                return;
+            }
+
+            ClearCardPortraitFraming(portraitImage);
+            switch (npcId)
+            {
+                case NpcIds.Sandra:
+                    portraitImage.AddToClassList("portrait-image--sandra");
+                    break;
+                case NpcIds.Brutus:
+                    portraitImage.AddToClassList("portrait-image--brutus");
+                    break;
+                case NpcIds.Tommy:
+                    portraitImage.AddToClassList("portrait-image--tommy");
+                    break;
+            }
+        }
+
+        private static void ClearCardPortraitFraming(VisualElement portraitImage)
+        {
+            if (portraitImage == null)
+            {
+                return;
+            }
+
+            portraitImage.RemoveFromClassList("portrait-image--sandra");
+            portraitImage.RemoveFromClassList("portrait-image--brutus");
+            portraitImage.RemoveFromClassList("portrait-image--tommy");
+        }
+
+        private static bool IsDigitPressedThisFrame(int digit)
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current == null)
+            {
+                return false;
+            }
+
+            switch (digit)
+            {
+                case 1:
+                    return Keyboard.current.digit1Key.wasPressedThisFrame;
+                case 2:
+                    return Keyboard.current.digit2Key.wasPressedThisFrame;
+                case 3:
+                    return Keyboard.current.digit3Key.wasPressedThisFrame;
+                default:
+                    return false;
+            }
 #else
-            return FindObjectOfType<T>();
+            return false;
 #endif
         }
+
+        private static bool IsKeyPressedThisFrame(KeyCode keyCode)
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current == null)
+            {
+                return false;
+            }
+
+            switch (keyCode)
+            {
+                case KeyCode.Tab:
+                    return Keyboard.current.tabKey.wasPressedThisFrame;
+                case KeyCode.Escape:
+                    return Keyboard.current.escapeKey.wasPressedThisFrame;
+                default:
+                    return false;
+            }
+#else
+            return false;
+#endif
+        }
+
     }
 }

@@ -1,0 +1,70 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/UI/Theme/Tokens.uss?fileID=7433441132597879392&amp;guid=b2e7f593c4f8d65fbb2d63c9f8e0a2e5&amp;type=3#Tokens"/>
+    <Style src="project://database/Assets/Resources/UI/Theme/primitives.uss?fileID=7433441132597879392&amp;guid=f1e8c47aa9b045d2bbc94e1f6d28a703&amp;type=3#primitives"/>
+    <Style src="project://database/Assets/Resources/UI/Hud/HudStyles.uss?fileID=7433441132597879392&amp;guid=4d8c1f2a7b6e5d4cb892f3e1a07c5b69&amp;type=3#HudStyles"/>
+
+    <!--
+      HUD root. picking-mode=Ignore so reticle/rage roster never blocks
+      raycasts to the world. Win overlay re-enables picking on its own
+      pickable subtree when shown.
+    -->
+    <ui:VisualElement name="HudRoot" class="hud-root" picking-mode="Ignore">
+
+        <!-- Center reticle. State driven via classes by HudController. -->
+        <ui:VisualElement name="Reticle" class="reticle reticle--idle" picking-mode="Ignore">
+            <ui:VisualElement class="reticle-arm reticle-arm--h" picking-mode="Ignore"/>
+            <ui:VisualElement class="reticle-arm reticle-arm--v" picking-mode="Ignore"/>
+        </ui:VisualElement>
+
+        <!-- Flip-out roster, top-left. Header shows overall progress; the
+             body is populated per-NPC by HudController. Toggle visibility
+             with H (HudController handles the keybind + state). Styled as
+             a paper memo pinned to the corkboard so it belongs in the
+             same visual world as the clipboard / pause / main menu. -->
+        <ui:VisualElement name="RageRoster" class="rage-roster" picking-mode="Ignore">
+            <ui:VisualElement class="rage-roster-pin" picking-mode="Ignore"/>
+            <ui:VisualElement class="roster-header" picking-mode="Ignore">
+                <ui:VisualElement class="roster-header-row" picking-mode="Ignore">
+                    <ui:Label class="roster-title" text="FLIP OUT"/>
+                    <ui:Label name="RosterCount" class="roster-count" text="0 / 0"/>
+                </ui:VisualElement>
+                <ui:VisualElement name="RosterPips" class="roster-pip-strip" picking-mode="Ignore"/>
+                <ui:Label class="roster-hint-key" text="[H] hide"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="RosterBody" class="roster-body" picking-mode="Ignore"/>
+        </ui:VisualElement>
+
+        <!-- Minimized "peek" pill, shown when the roster is hidden. Lives at
+             the same top-left anchor so the player has a permanent reminder
+             of the [H] keybind. -->
+        <ui:VisualElement name="RosterPeek" class="roster-peek roster-peek--hidden" picking-mode="Ignore">
+            <ui:Label class="roster-peek-label" text="[H] roster"/>
+        </ui:VisualElement>
+
+        <!-- Hint toast, bottom-center, slides in/out via state class -->
+        <ui:VisualElement name="HintToast" class="hint-toast hint-toast--hidden" picking-mode="Ignore">
+            <ui:VisualElement class="hint-toast-icon" picking-mode="Ignore"/>
+            <ui:Label name="HintLabel" class="hint-toast-label" text=""/>
+        </ui:VisualElement>
+
+        <!-- Win overlay: explicit Position so buttons work under Ignore
+             ancestor. Rebuilt as a "TERMINATED" stamp certificate so it
+             reads as part of the same paper world as the clipboard. -->
+        <ui:VisualElement name="WinScreen" class="win-screen win-screen--hidden" picking-mode="Position">
+            <ui:VisualElement class="win-screen-card modal-card modal-card--md modal-card--centered" picking-mode="Position">
+                <ui:VisualElement class="win-screen-tape win-screen-tape--left"/>
+                <ui:VisualElement class="win-screen-tape win-screen-tape--right"/>
+                <ui:Label class="win-screen-eyebrow" text="EMPLOYEE INCIDENT REPORT"/>
+                <ui:Label class="win-screen-title" text="OFFICE FLIPPED"/>
+                <ui:VisualElement class="win-screen-stamp-row">
+                    <ui:Label class="win-screen-stamp stamp-banner" text="TERMINATED"/>
+                </ui:VisualElement>
+                <ui:Label class="win-screen-body" text="The boss flipped out. Office chaos complete."/>
+                <ui:VisualElement class="win-screen-actions modal-actions modal-actions--row">
+                    <ui:Button name="WinRestart" class="btn btn--primary btn--lg win-screen-btn win-screen-btn--primary" text="Restart Game"/>
+                    <ui:Button name="WinQuit" class="btn btn--secondary btn--lg win-screen-btn win-screen-btn--secondary" text="Quit to Menu"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

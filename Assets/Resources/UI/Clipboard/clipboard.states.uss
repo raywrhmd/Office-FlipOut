@@ -1,0 +1,149 @@
+/* ===================================================================
+   Office Flip Out - Clipboard STATES
+   Class-based state toggles, visibility helpers, and interaction
+   pseudo-class effects (hover/active/disabled). Must load AFTER
+   clipboard.base.uss + clipboard.components.uss so these wins.
+   =================================================================== */
+
+/* ---- Visibility ---- */
+
+.hidden { display: none; }
+
+/* ---- Animation states ---- */
+
+.dimmer.anim-hidden { opacity: 0; }
+
+.board.anim-closed {
+    translate: 0 1200px;
+    scale: 0.92 0.92;
+    opacity: 0;
+}
+
+/* ---- Tab states ---- */
+
+.sticky-tab-root:hover  { opacity: 0.92; }
+.sticky-tab-root:active { opacity: 0.88; }
+.sticky-tab-root.tab-active { opacity: 1; }
+
+.tab-yellow.tab-active { background-color: var(--color-tab-yellow-active); }
+.tab-green.tab-active  { background-color: var(--color-tab-green-active); }
+.tab-blue.tab-active   { background-color: var(--color-tab-blue-active); }
+
+/* ---- Footer button states ----
+
+   Hover/press/disabled are owned by primitives.uss (.btn + token
+   driven --motion-hover-scale / --motion-press-scale). The legacy
+   class names continue to work because primitives.uss bridges them
+   to the same token-driven scale, so this section intentionally
+   leaves nothing to declare. */
+
+/* ---- Quit corner button states ----
+
+   Quit corner is retired (Esc opens the pause menu now), so these
+   used to be the only place declaring the 1.12 hover scale. The
+   class still exists as a USS rule in clipboard.base.uss for any
+   straggling reference; the token-driven hover scale applies if
+   anyone re-introduces it. */
+
+/* ---- Status badges ---- */
+
+.status-active  { background-color: var(--color-status-active); }
+.status-flipped { background-color: var(--color-status-flipped); }
+
+/* ---- Progress row bar states ---- */
+
+.progress-row-bar-fill--hot { background-color: var(--color-rage-high); }
+.progress-row-bar-fill--flipped { background-color: var(--color-status-flipped); width: 100%; }
+.progress-row-bar-fill--locked { background-color: var(--color-status-locked); }
+
+/* ---- Pause popup button states ----
+
+   Owned by primitives.uss bridge rules (.btn-pause maps to .btn
+   hover/press tokens). Kept the heading for reading clarity. */
+
+/* ---- Clipboard hint visibility ---- */
+
+.clipboard-hint.clipboard-hint--visible {
+    opacity: 1;
+    translate: 0 0;
+}
+
+/* ---- Dossier-open chrome ---- */
+
+.dossier-detail-open .board-paper-clip { display: none; }
+
+/* ---- Main menu title fallback (hidden when title art is present) ---- */
+
+.main-menu-title-fallback.hidden-title-fallback { display: none; }
+
+/* ---- Main menu start button hover ----
+
+   Now uses the unified --motion-hover-scale token via the .btn
+   primitive bridge in primitives.uss. The previously-bespoke 1.08
+   pop is gone in favor of consistency across the project. */
+
+/* ===================================================================
+   Phase 5 polish: USS transitions
+   Layer transitions in here so component USS stays declarative.
+
+   Note: per-button hover/press transitions now live in primitives.uss
+   under the legacy-class bridge so the project converges on
+   --motion-hover-scale / --motion-press-scale. This file only
+   declares motion that is screen-shape specific (cards lifting,
+   tabs activating, the board opening, the dossier sliding).
+   =================================================================== */
+
+/* Card hover lift (paper-card aesthetic). The shadow underneath provides
+   the visual cue that cards are "pickable". */
+.staff-card {
+    transition-property: scale, translate;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+}
+.staff-card:hover {
+    translate: 0 -4px;
+    scale: var(--motion-hover-scale) var(--motion-hover-scale);
+}
+
+/* Tabs micro-bounce on switch */
+.sticky-tab-root {
+    transition-property: background-color, scale, opacity, translate;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+}
+/* Active tab lifts above the inactive ones - sells the "selected sheet
+   sticking up further out from the clipboard" metaphor. */
+.sticky-tab-root.tab-active {
+    scale: var(--motion-hover-scale) var(--motion-hover-scale);
+    translate: 0 -2px;
+}
+
+/* Board open / close: the existing anim-closed class drives translate+scale.
+   This adds the easing that makes it feel like a paper clipboard tossing
+   onto / sliding off the screen rather than snapping. */
+.board {
+    transition-property: translate, scale, opacity;
+    transition-duration: var(--motion-slow);
+    transition-timing-function: ease-out;
+}
+
+/* Dimmer fade to match board motion */
+.dimmer {
+    transition-property: opacity;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+}
+
+/* Dossier reveal: the dossier view slides in from below when opened */
+.dossier-view {
+    transition-property: opacity, translate;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+    opacity: 1;
+    translate: 0 0;
+}
+.dossier-view.hidden {
+    /* Keep display:none for layout, but provide motion on the show side. */
+    display: none;
+}
+

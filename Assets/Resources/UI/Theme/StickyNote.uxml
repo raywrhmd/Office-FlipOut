@@ -1,0 +1,22 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <!--
+      Reusable post-it sticky note.
+
+      Used by:
+        - Map placeholder ("we're working on it" stack)
+        - Pause/main-menu helper hints
+        - Any future toast / inline note
+
+      Layout (top -> bottom):
+        post-it-shadow  -> 1px offset paper shadow
+        post-it-pin     -> push-pin sprite, top-center
+        post-it-text    -> body Label, queried by name "StickyText"
+
+      Host code can query "StickyText" to bind the message.
+    -->
+    <ui:VisualElement class="post-it-note" picking-mode="Ignore">
+        <ui:VisualElement class="post-it-shadow"/>
+        <ui:VisualElement class="post-it-pin"/>
+        <ui:Label name="StickyText" class="post-it-text" text=""/>
+    </ui:VisualElement>
+</ui:UXML>

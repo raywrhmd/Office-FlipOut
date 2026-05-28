@@ -1,20 +1,38 @@
 using UnityEngine;
+using OfficeFlipOut.Data;
 using OfficeFlipOut.UI;
+using OfficeFlipOut.UI.Hud;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
+/// <summary>
+/// Temporary component to store original rigidbody properties while held.
+/// </summary>
+public class HeldObjectState : MonoBehaviour
+{
+    public float originMass;
+    public float originDrag;
+    public float originAngularDrag;
+    public bool originIsKinematic;
+    public bool originUseGravity;
+    public CollisionDetectionMode originCollisionMode;
+    public RigidbodyInterpolation originInterpolation;
+}
 
 public class PhysicsGrab : MonoBehaviour
 {
+    [Header("Grab Settings")]
     public Camera cam;
     public Transform holdPoint;
 
     public float grabDistance = 3f;
+    public float grabSphereRadius = 0.3f; // Radius for sphere cast to be more forgiving (increased from 0.2)
     public float throwForce = 10f;
 
     [Header("Aiming Reticle")]
-    public bool showAimReticle = true;
-    public float reticleSize = 10f;
-    public float reticleThickness = 2f;
-    public Color defaultReticleColor = Color.white;
-    public Color interactReticleColor = new Color(0.3f, 1f, 0.3f, 1f);
+    [Tooltip("When true, this component publishes interactable hover state to the HUD reticle each frame.")]
+    public bool publishReticleHoverState = true;
 
     [Header("Rage Interaction")]
     public bool requireFishForMicrowaveInteraction = true;
@@ -35,7 +53,7 @@ public class PhysicsGrab : MonoBehaviour
     public bool enableCoffeeSpillRage = true;
     public string[] coffeeNameTokens = new string[] { "coffee", "cup", "mug" };
     public Rage_Meter coffeeSpillTargetRageMeter;
-    public string coffeeSpillTargetNpcId = "npc_1";
+    public string coffeeSpillTargetNpcId = NpcIds.Sandra;
     public float coffeeSpillNpcRadius = 2f;
     public float coffeeSpillMinImpactSpeed = 1.2f;
     public bool logCoffeeSpillDebug = true;
@@ -53,13 +71,45 @@ public class PhysicsGrab : MonoBehaviour
     [Tooltip("Optional: if the held coffee already has a CoffeeSpillRage component, disable it so physics collisions don't double-trigger.")]
     public bool disableCoffeeSpillRageOnSnap = true;
 
+    [Header("Grab Feel")]
+    public float grabSnapTime = 0.15f; // How long to smoothly transition object to hand
+    public AnimationCurve grabSnapEase = AnimationCurve.EaseInOut(0, 0, 1, 1);
+    public float grabForce = 20f;
+    public float grabDamping = 10f;
+    public float grabDistanceLimit = 3f;
+    
     private Rigidbody heldObject;
+    private float grabTransitionTimer;
+    private Vector3 grabStartPosition;
+
+    // Tracks which RageInteractionPropSignals we've already toast-hinted for.
+    // Keys live for the lifetime of this PhysicsGrab (i.e. one play session).
+    private readonly System.Collections.Generic.HashSet<int> hintedSignalIds =
+        new System.Collections.Generic.HashSet<int>();
 
     void Awake()
     {
         if (coffeeSpillTargetRageMeter == null)
         {
             coffeeSpillTargetRageMeter = FindRageMeterByNpcId(coffeeSpillTargetNpcId);
+        }
+    }
+
+    void OnEnable()
+    {
+        HudSignals.HintsEnabledChanged += HandleHintsEnabledChanged;
+    }
+
+    void OnDisable()
+    {
+        HudSignals.HintsEnabledChanged -= HandleHintsEnabledChanged;
+    }
+
+    private void HandleHintsEnabledChanged(bool enabled)
+    {
+        if (enabled)
+        {
+            hintedSignalIds.Clear();
         }
     }
 
@@ -75,7 +125,7 @@ public class PhysicsGrab : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.E))
+        if (WasInteractPressed())
         {
             if (heldObject == null)
             {
@@ -93,7 +143,7 @@ public class PhysicsGrab : MonoBehaviour
             }
         }
 
-        if (heldObject != null && Input.GetMouseButtonDown(0))
+        if (heldObject != null && WasThrowPressed())
         {
             Throw();
         }
@@ -112,27 +162,97 @@ public class PhysicsGrab : MonoBehaviour
         }
     }
 
+    private static bool WasInteractPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame;
+#else
+        return false;
+#endif
+    }
+
+    private static bool WasThrowPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+#else
+        return false;
+#endif
+    }
+
     void TryGrab()
     {
         Ray ray = new Ray(cam.transform.position, cam.transform.forward);
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit, grabDistance))
+        Rigidbody rb = null;
+        
+        // First try: sphere cast for more forgiving detection
+        bool hitSphere = Physics.SphereCast(ray, grabSphereRadius, out RaycastHit sphereHit, grabDistance);
+        
+        if (hitSphere)
         {
-            Rigidbody rb = hit.collider.attachedRigidbody;
+            rb = sphereHit.collider.attachedRigidbody;
             if (rb == null)
             {
-                rb = hit.collider.GetComponentInParent<Rigidbody>();
+                rb = sphereHit.collider.GetComponentInParent<Rigidbody>();
             }
-
-            if (rb != null && !IsLockedInMicrowave(rb) && !IsLockedInCoffeeSpill(rb))
+        }
+        
+        // Fallback: try regular raycast for small objects the sphere missed
+        if (rb == null)
+        {
+            bool hitRay = Physics.Raycast(ray, out RaycastHit rayHit, grabDistance);
+            if (hitRay)
             {
-                heldObject = rb;
+                rb = rayHit.collider.attachedRigidbody;
+                if (rb == null)
+                {
+                    rb = rayHit.collider.GetComponentInParent<Rigidbody>();
+                }
+            }
+        }
 
-                heldObject.useGravity = false;
-                heldObject.isKinematic = false;
-                heldObject.linearVelocity = Vector3.zero;
-                heldObject.angularVelocity = Vector3.zero;
+        if (rb != null && !IsLockedInMicrowave(rb) && !IsLockedInCoffeeSpill(rb))
+        {
+            heldObject = rb;
+            grabStartPosition = heldObject.position;
+            grabTransitionTimer = 0f;
+
+            // Unlock physics if this prop was locked at start
+            if (heldObject.TryGetComponent<KinematicAtStart>(out KinematicAtStart kinematicStart))
+            {
+                kinematicStart.UnlockPhysics();
+            }
+            
+            // Store initial rigidbody state before modifying
+            if (!heldObject.TryGetComponent<HeldObjectState>(out _))
+            {
+                HeldObjectState state = heldObject.gameObject.AddComponent<HeldObjectState>();
+                state.originMass = heldObject.mass;
+                state.originDrag = heldObject.linearDamping;
+                state.originAngularDrag = heldObject.angularDamping;
+                state.originIsKinematic = heldObject.isKinematic;
+                state.originUseGravity = heldObject.useGravity;
+                state.originCollisionMode = heldObject.collisionDetectionMode;
+                state.originInterpolation = heldObject.interpolation;
+            }
+            
+            // Make non-kinematic for physics-based holding to avoid clipping and feel better
+            heldObject.isKinematic = false;
+            heldObject.useGravity = false;
+            heldObject.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            heldObject.interpolation = RigidbodyInterpolation.Interpolate;
+            
+            // Ensure floor detection is active
+            if (!heldObject.TryGetComponent<PropFloorDetection>(out _))
+            {
+                PropFloorDetection floorDetection = heldObject.gameObject.AddComponent<PropFloorDetection>();
+                floorDetection.SetSpawnPoint(heldObject.position, heldObject.rotation);
+            }
+            
+            // Ensure physics stabilization
+            if (!heldObject.TryGetComponent<PropPhysicsStabilizer>(out _))
+            {
+                heldObject.gameObject.AddComponent<PropPhysicsStabilizer>();
             }
         }
     }
@@ -142,7 +262,17 @@ public class PhysicsGrab : MonoBehaviour
         Ray ray = new Ray(cam.transform.position, cam.transform.forward);
         RaycastHit hit;
 
-        if (!Physics.Raycast(ray, out hit, grabDistance))
+        // Use sphere cast for more reliable interaction detection
+        // Try sphere cast first, then fallback to raycast for small signals
+        bool hitSignal = Physics.SphereCast(ray, grabSphereRadius * 0.5f, out hit, grabDistance);
+        
+        if (!hitSignal)
+        {
+            // Fallback: regular raycast for tiny signal objects
+            hitSignal = Physics.Raycast(ray, out hit, grabDistance);
+        }
+        
+        if (!hitSignal)
         {
             return false;
         }
@@ -577,28 +707,139 @@ public class PhysicsGrab : MonoBehaviour
         CoffeeSpillLockedItem lockState = rb.GetComponent<CoffeeSpillLockedItem>();
         return lockState != null && lockState.IsLocked;
     }
+    
+    void RestoreHeldObjectProperties()
+    {
+        if (heldObject == null)
+            return;
+        
+        if (heldObject.TryGetComponent<HeldObjectState>(out HeldObjectState state))
+        {
+            heldObject.mass = state.originMass;
+            heldObject.linearDamping = state.originDrag;
+            heldObject.angularDamping = state.originAngularDrag;
+            heldObject.isKinematic = state.originIsKinematic;
+            heldObject.useGravity = state.originUseGravity;
+            
+            // Cannot set continuous on a kinematic rigidbody, handle order carefully
+            if (state.originIsKinematic)
+            {
+                heldObject.collisionDetectionMode = state.originCollisionMode;
+                heldObject.isKinematic = true;
+            }
+            else
+            {
+                heldObject.isKinematic = false;
+                heldObject.collisionDetectionMode = state.originCollisionMode;
+            }
+            
+            heldObject.interpolation = state.originInterpolation;
+            Object.Destroy(state);
+        }
+    }
 
     void MoveHeldObject()
     {
-        Vector3 moveDir = holdPoint.position - heldObject.position;
+        if (heldObject == null)
+            return;
+            
+        Vector3 targetPos = holdPoint.position;
+        Vector3 camPos = cam.transform.position;
+        Vector3 dirToHold = targetPos - camPos;
+        float distToHold = dirToHold.magnitude;
 
-        heldObject.linearVelocity = moveDir * 10f;
+        // Prevent putting object outside the map / through walls by raycasting from camera to hold point
+        RaycastHit[] hits = Physics.RaycastAll(camPos, dirToHold.normalized, distToHold, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        float closestHitDist = distToHold;
+        bool hitObstacle = false;
+        
+        for (int i = 0; i < hits.Length; i++)
+        {
+            RaycastHit hit = hits[i];
+            if (hit.collider.attachedRigidbody == heldObject || hit.collider.transform.IsChildOf(heldObject.transform))
+                continue;
+                
+            if (hit.distance < closestHitDist)
+            {
+                closestHitDist = hit.distance;
+                hitObstacle = true;
+            }
+        }
+        
+        if (hitObstacle)
+        {
+            // Bring target pos slightly closer to camera if hitting a wall
+            float hitBuffer = 0.2f;
+            targetPos = camPos + dirToHold.normalized * Mathf.Max(0f, closestHitDist - hitBuffer);
+        }
+
+        // Distance check - drop if the object gets stuck behind something and player walks away
+        float distance = Vector3.Distance(heldObject.position, targetPos);
+        if (distance > grabDistanceLimit)
+        {
+            Drop();
+            return;
+        }
+
+        // Smoothly transition to hand during grab snap time
+        if (grabTransitionTimer < grabSnapTime)
+        {
+            grabTransitionTimer += Time.deltaTime;
+            float t = grabSnapEase.Evaluate(Mathf.Clamp01(grabTransitionTimer / grabSnapTime));
+            Vector3 snappedPos = Vector3.Lerp(grabStartPosition, targetPos, t);
+            heldObject.MovePosition(snappedPos);
+            heldObject.linearVelocity = Vector3.zero;
+        }
+        else
+        {
+            // Physics movement to feel responsive but respect collisions
+            Vector3 velocityTarget = (targetPos - heldObject.position) * grabForce;
+            heldObject.linearVelocity = velocityTarget;
+            
+            // Dampen angular velocity to prevent wild spinning when dragging along walls
+            heldObject.angularVelocity = Vector3.Lerp(heldObject.angularVelocity, Vector3.zero, Time.fixedDeltaTime * grabDamping);
+        }
     }
 
     void Drop()
     {
-        heldObject.useGravity = true;
-        heldObject.isKinematic = false;
+        if (heldObject != null)
+        {
+            Vector3 holdVelocity = Vector3.ClampMagnitude(heldObject.linearVelocity, 2f);
+            holdVelocity += Vector3.down * 0.5f;
+
+            RestoreHeldObjectProperties();
+            heldObject.useGravity = true;
+            heldObject.isKinematic = false;
+            heldObject.linearVelocity = holdVelocity;
+        }
         heldObject = null;
+        grabTransitionTimer = 0f;
     }
 
     void Throw()
     {
         Rigidbody objectToThrow = heldObject;
-        heldObject.useGravity = true;
-        heldObject.isKinematic = false;
-        heldObject.AddForce(cam.transform.forward * throwForce, ForceMode.Impulse);
+        if (objectToThrow == null)
+        {
+            heldObject = null;
+            grabTransitionTimer = 0f;
+            return;
+        }
+        
+        RestoreHeldObjectProperties();
+        objectToThrow.useGravity = true;
+        objectToThrow.isKinematic = false;
+        
+        // Apply throw force based on camera direction and up
+        Vector3 throwVelocity = cam.transform.forward * throwForce;
+        // Add slight upward bias to make throws feel punchier
+        throwVelocity += cam.transform.up * (throwForce * 0.3f);
+        throwVelocity = Vector3.ClampMagnitude(throwVelocity, 50f);
+        objectToThrow.linearVelocity = throwVelocity;
+        
         heldObject = null;
+        grabTransitionTimer = 0f;
 
         if (allowThrownFishMicrowaveSnap && objectToThrow != null && IsFishObject(objectToThrow))
         {
@@ -614,58 +855,43 @@ public class PhysicsGrab : MonoBehaviour
         ArmThrownObjectMarker(objectToThrow);
     }
 
-    void OnGUI()
+    void LateUpdate()
     {
-        if (!showAimReticle || ClipboardUIState.IsOpen)
+        if (!publishReticleHoverState)
         {
             return;
         }
 
-        Color color = GetReticleColor();
-        float centerX = Screen.width * 0.5f;
-        float centerY = Screen.height * 0.5f;
-
-        float halfSize = reticleSize * 0.5f;
-        float halfThickness = reticleThickness * 0.5f;
-        Color previous = GUI.color;
-        GUI.color = color;
-
-        GUI.DrawTexture(
-            new Rect(centerX - halfSize, centerY - halfThickness, reticleSize, reticleThickness),
-            Texture2D.whiteTexture);
-        GUI.DrawTexture(
-            new Rect(centerX - halfThickness, centerY - halfSize, reticleThickness, reticleSize),
-            Texture2D.whiteTexture);
-
-        GUI.color = previous;
+        // Reticle hover state is pushed to the HUD via a static signal bus
+        // so PhysicsGrab doesn't need a direct dependency on the HUD doc.
+        HudSignals.SetReticleState(EvaluateReticleHoverState());
     }
 
-    Color GetReticleColor()
+    ReticleState EvaluateReticleHoverState()
     {
         if (cam == null)
         {
-            return defaultReticleColor;
+            return ReticleState.Idle;
         }
 
         Ray ray = new Ray(cam.transform.position, cam.transform.forward);
         RaycastHit hit;
         if (!Physics.Raycast(ray, out hit, grabDistance))
         {
-            return defaultReticleColor;
+            return ReticleState.Idle;
         }
 
         RageInteractionPropSignal signal = hit.collider.GetComponentInParent<RageInteractionPropSignal>();
         if (signal != null)
         {
-            // Microwave: show interact only when holding valid fish.
+            TryEmitFirstHoverHint(signal);
             if (signal.SignalEventType == RageSignalEventType.MicrowaveFish)
             {
                 if (!requireFishForMicrowaveInteraction || (heldObject != null && IsFishObject(heldObject)))
                 {
-                    return interactReticleColor;
+                    return ReticleState.Interact;
                 }
             }
-            // Coffee spill: show interact only when holding coffee.
             else if (signal.SignalEventType == RageSignalEventType.SpillDrinkOnDesk ||
                      signal.SignalEventType == RageSignalEventType.FinalBossSpillDrinkOnDesk)
             {
@@ -677,7 +903,7 @@ public class PhysicsGrab : MonoBehaviour
 
                 if (canInteract)
                 {
-                    return interactReticleColor;
+                    return ReticleState.Interact;
                 }
             }
             else
@@ -685,13 +911,13 @@ public class PhysicsGrab : MonoBehaviour
                 if (signal.SignalEventType == RageSignalEventType.KnockOver &&
                     signal.CanPerformKnockOver(hit.collider))
                 {
-                    return interactReticleColor;
+                    return ReticleState.Interact;
                 }
 
                 if (signal.SignalEventType == RageSignalEventType.MakeLoudNoise ||
                     signal.SignalEventType == RageSignalEventType.UnplugDevice)
                 {
-                    return interactReticleColor;
+                    return ReticleState.Interact;
                 }
             }
         }
@@ -703,9 +929,49 @@ public class PhysicsGrab : MonoBehaviour
         }
         if (rb != null && !IsLockedInMicrowave(rb) && !IsLockedInCoffeeSpill(rb))
         {
-            return interactReticleColor;
+            return ReticleState.Grab;
         }
 
-        return defaultReticleColor;
+        return ReticleState.Idle;
+    }
+
+    void TryEmitFirstHoverHint(RageInteractionPropSignal signal)
+    {
+        if (signal == null) return;
+        if (!HudSignals.HintsEnabled) return;
+        int id = signal.GetInstanceID();
+        if (!hintedSignalIds.Add(id)) return;
+        string hint = HintTextFor(signal.SignalEventType);
+        if (!string.IsNullOrEmpty(hint))
+        {
+            HudSignals.RequestHint(hint);
+        }
+    }
+
+    static string HintTextFor(RageSignalEventType type)
+    {
+        switch (type)
+        {
+            case RageSignalEventType.SpillDrinkOnDesk:
+            case RageSignalEventType.FinalBossSpillDrinkOnDesk:
+                return "Press E to spill drink";
+            case RageSignalEventType.MicrowaveFish:
+            case RageSignalEventType.MicrowaveFishItem:
+                return "Bring fish, press E";
+            case RageSignalEventType.StealObject:
+                return "Grab it and move away";
+            case RageSignalEventType.KnockOver:
+                return "Press E to knock over";
+            case RageSignalEventType.BringObjectNear:
+                return "Carry near target";
+            case RageSignalEventType.HitNpcWithProjectile:
+                return "Throw object at NPC";
+            case RageSignalEventType.MakeLoudNoise:
+                return "Press E for loud noise";
+            case RageSignalEventType.UnplugDevice:
+                return "Press E to unplug";
+            default:
+                return string.Empty;
+        }
     }
 }

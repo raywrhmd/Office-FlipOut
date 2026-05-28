@@ -1,0 +1,678 @@
+/* ===================================================================
+   Office Flip Out - HUD styles
+   Consumes design tokens from Tokens.uss and the shared button /
+   modal / chip / bar primitives from primitives.uss. The roster is
+   styled as a "paper memo on the corkboard" so the HUD belongs to
+   the same visual world as the clipboard / pause / main menu.
+   Layered above the world, below the clipboard / menus.
+   =================================================================== */
+
+.hud-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    flex-grow: 1;
+}
+
+/* ---------- Reticle ---------- */
+
+.reticle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    margin-left: -7px;
+    margin-top: -7px;
+    align-items: center;
+    justify-content: center;
+    transition-property: scale, opacity;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+    opacity: 0.85;
+}
+
+.reticle-arm {
+    position: absolute;
+    background-color: var(--reticle-idle);
+    transition-property: background-color, scale;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+}
+
+.reticle-arm--h {
+    width: 14px;
+    height: 2px;
+    top: 6px;
+}
+
+.reticle-arm--v {
+    width: 2px;
+    height: 14px;
+    left: 6px;
+}
+
+.reticle--hidden {
+    opacity: 0;
+    scale: 0.6 0.6;
+}
+
+.reticle--idle .reticle-arm     { background-color: var(--reticle-idle); }
+.reticle--interact              { scale: 1.25 1.25; }
+.reticle--interact .reticle-arm { background-color: var(--reticle-interact); }
+.reticle--grab                  { scale: 1.15 1.15; }
+.reticle--grab .reticle-arm     { background-color: var(--reticle-grab); }
+
+/* ---------- Rage Roster ----------
+
+   Top-left progress panel reskinned as a paper memo:
+     - paper surface with subtle ruled separators between rows
+     - push-pin top-left to "tack" it to the corkboard
+     - ink typography instead of dark-fill chrome
+     - row chips reuse the .chip primitive's color tokens
+
+   Pulse / flash state classes are still toggled from HudController. */
+
+.rage-roster {
+    position: absolute;
+    /* Slightly more breathing room than --space-4 so the panel doesn't kiss
+       the screen edge on windowed builds where the OS chrome eats the very
+       top of the client area. PanelSettings.ScaleWithScreenSize handles
+       proportional shrink at low res automatically (panel keeps ~15-18%
+       of viewport width across 1024x768 through 4K + ultrawide). */
+    left: var(--space-5);
+    top: var(--space-5);
+    flex-direction: column;
+    align-items: stretch;
+    background-color: var(--surface-paper-translucent);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 2px;
+    border-left-color: var(--border-board-trim);
+    border-right-color: var(--border-board-trim);
+    border-top-color: var(--border-board-trim);
+    border-bottom-color: var(--border-board-trim-strong);
+    padding: 0;
+    width: 298px;
+    min-width: 298px;
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    transition-property: opacity, translate;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+    opacity: 1;
+    translate: 0 0;
+}
+
+/* Push-pin tacks the memo to the corkboard. Sits over the top-left
+   corner of the panel, visually "holding it up". */
+.rage-roster-pin {
+    position: absolute;
+    left: -10px;
+    top: -10px;
+    width: 26px;
+    height: 26px;
+    rotate: -8deg;
+    background-image: resource('UI/Clipboard/push_pin');
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* Hidden state - toggled by HudController via [H]. Fades + slides up.
+   Picking-mode is already Ignore so the invisible panel never blocks
+   aim; no display:none here so the transition can actually animate. */
+.rage-roster--hidden {
+    opacity: 0;
+    translate: 0 -10px;
+}
+
+/* Minimized peek pill - sticky-note styled so it matches the paper world. */
+.roster-peek {
+    position: absolute;
+    /* Anchored to the exact same spot as .rage-roster so the toggle
+       visually swaps in/out at one consistent point. */
+    left: var(--space-5);
+    top: var(--space-5);
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--surface-postit-yellow-soft);
+    padding: 5px 12px;
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-medium);
+    border-right-color: var(--border-paper-medium);
+    border-top-color: var(--border-paper-medium);
+    border-bottom-color: var(--border-paper-medium);
+    rotate: -1.5deg;
+    transition-property: opacity, translate;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+    opacity: 1;
+    translate: 0 0;
+}
+
+.roster-peek--hidden {
+    opacity: 0;
+    translate: 0 -8px;
+}
+
+.roster-peek-label {
+    font-size: var(--font-size-xs);
+    -unity-font-style: bold;
+    color: var(--color-ink-strong);
+    letter-spacing: 0.5px;
+    -unity-text-align: middle-left;
+}
+
+/* ----- Roster header ----- */
+
+/* The header used to be a saturated dark-brown band; now it's a paper
+   strap (board-trim) with ink-on-paper typography that still anchors
+   the panel visually but reads as part of the same memo. */
+.roster-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px 12px 7px 12px;
+    background-color: var(--surface-board-strap);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.roster-header-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.roster-title {
+    font-size: var(--font-size-md);
+    -unity-font-style: bold;
+    color: var(--color-paper);
+    letter-spacing: 1.5px;
+    -unity-text-align: middle-left;
+}
+
+.roster-count {
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    color: var(--color-tab-yellow);
+    -unity-text-align: middle-right;
+}
+
+.roster-pip-strip {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    /* Reserve room for one row of pips (14px tall + 2px margin-bottom)
+       so the header doesn't grow vertically the moment snapshots arrive.
+       This keeps the absolutely-positioned [H] hint stable. */
+    min-height: 16px;
+    /* Leave room on the right so pips don't crash into the [H] chip. */
+    padding-right: 56px;
+}
+
+/* "[H] hide" reminder shown along the bottom of the header banner.
+   Stays small and low-contrast so it doesn't compete with the title. */
+.roster-hint-key {
+    position: absolute;
+    right: 8px;
+    bottom: 4px;
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgba(252, 244, 230, 0.55);
+    letter-spacing: 0.5px;
+    -unity-text-align: middle-right;
+}
+
+.roster-pip {
+    width: 14px;
+    height: 14px;
+    margin-right: 5px;
+    margin-bottom: 2px;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    border-bottom-left-radius: 7px;
+    border-bottom-right-radius: 7px;
+    background-color: rgba(0, 0, 0, 0.32);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(252, 244, 230, 0.28);
+    border-right-color: rgba(252, 244, 230, 0.28);
+    border-top-color: rgba(252, 244, 230, 0.28);
+    border-bottom-color: rgba(252, 244, 230, 0.28);
+    transition-property: background-color, scale;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+}
+
+.roster-pip--flipped {
+    background-color: var(--color-status-flipped);
+    border-left-color: rgba(255, 220, 90, 0.8);
+    border-right-color: rgba(255, 220, 90, 0.8);
+    border-top-color: rgba(255, 220, 90, 0.8);
+    border-bottom-color: rgba(255, 220, 90, 0.8);
+    scale: 1.08 1.08;
+}
+
+.roster-pip--locked {
+    background-color: rgba(60, 50, 45, 0.6);
+    border-left-color: rgba(180, 165, 145, 0.4);
+    border-right-color: rgba(180, 165, 145, 0.4);
+    border-top-color: rgba(180, 165, 145, 0.4);
+    border-bottom-color: rgba(180, 165, 145, 0.4);
+}
+
+/* ----- Roster body / row card ----- */
+
+.roster-body {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 6px 6px 6px 6px;
+}
+
+/* Each row is a paper checklist item: ink-medium border-left as a
+   "tab marker" with the identity color, ruled separator below, and
+   ink-on-paper text. */
+.roster-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 8px 6px 6px;
+    margin-bottom: 5px;
+    background-color: var(--surface-paper-card-soft);
+    border-left-width: 3px;
+    border-left-color: var(--border-board-trim);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-top-color: var(--border-paper-soft);
+    border-right-color: var(--border-paper-soft);
+    border-bottom-color: var(--color-rule-line);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    transition-property: scale, background-color, border-left-color;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+}
+
+/* "Pulse" applied for one frame when a sabotage signal lands. The
+   transition above smooths the scale return. */
+.roster-row--pulse {
+    scale: 1.03 1.03;
+}
+
+/* "Flash" applied when the NPC flips out. Held until the next refresh. */
+.roster-row--flipped {
+    background-color: rgba(255, 215, 200, 0.95);
+    border-left-color: var(--color-status-flipped);
+}
+
+/* Paper portrait with a thin strip of "tape" decoration overlaid via
+   a sibling element added in C# (see roster-row-thumb-tape). */
+.roster-row-thumb {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    margin-right: 8px;
+    background-color: var(--color-paper-card);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-ink-mute);
+    border-right-color: var(--border-ink-mute);
+    border-top-color: var(--border-ink-mute);
+    border-bottom-color: var(--border-ink-mute);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    -unity-background-scale-mode: scale-to-fit;
+    overflow: hidden;
+    transition-property: border-color, scale;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+}
+
+.roster-row-thumb--hot {
+    border-left-color: var(--color-rage-high);
+    border-right-color: var(--color-rage-high);
+    border-top-color: var(--color-rage-high);
+    border-bottom-color: var(--color-rage-high);
+}
+
+.roster-row-thumb--flipped {
+    border-left-color: var(--color-status-flipped);
+    border-right-color: var(--color-status-flipped);
+    border-top-color: var(--color-status-flipped);
+    border-bottom-color: var(--color-status-flipped);
+    scale: 1.04 1.04;
+}
+
+.roster-row-thumb--locked {
+    border-left-color: var(--color-status-locked);
+    border-right-color: var(--color-status-locked);
+    border-top-color: var(--color-status-locked);
+    border-bottom-color: var(--color-status-locked);
+    opacity: 0.6;
+}
+
+.roster-row-body {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.roster-row-top {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3px;
+}
+
+.roster-row-name {
+    color: var(--color-ink-strong);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    flex-grow: 1;
+    flex-shrink: 1;
+    -unity-text-align: middle-left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Roster row chip uses .chip primitive sizing/colors via the variant
+   classes assigned in HudController. The legacy class names below
+   stay so HudController's RemoveFromClassList/AddToClassList calls
+   don't need to change. */
+.roster-row-chip {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    background-color: var(--color-status-active);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    padding: 2px 6px;
+    margin-left: 6px;
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+    transition-property: background-color;
+    transition-duration: var(--motion-medium);
+    letter-spacing: 0.5px;
+}
+
+.roster-row-chip--calm     { background-color: var(--color-status-active); }
+.roster-row-chip--agitated { background-color: rgb(180, 130, 40); }
+.roster-row-chip--hot      { background-color: var(--color-rage-high); }
+.roster-row-chip--flipped  { background-color: var(--color-status-flipped); }
+.roster-row-chip--locked   { background-color: var(--color-status-locked); }
+
+/* Task pip strip - one slot per required sabotage. Filled when done. */
+.roster-task-strip {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.roster-task-pip {
+    width: 8px;
+    height: 8px;
+    margin-right: 4px;
+    background-color: rgba(78, 58, 36, 0.18);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(78, 58, 36, 0.32);
+    border-right-color: rgba(78, 58, 36, 0.32);
+    border-top-color: rgba(78, 58, 36, 0.32);
+    border-bottom-color: rgba(78, 58, 36, 0.32);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    transition-property: background-color;
+    transition-duration: var(--motion-medium);
+}
+
+.roster-task-pip--done {
+    background-color: var(--color-status-active);
+    border-left-color: rgba(38, 28, 18, 0.45);
+    border-right-color: rgba(38, 28, 18, 0.45);
+    border-top-color: rgba(38, 28, 18, 0.45);
+    border-bottom-color: rgba(38, 28, 18, 0.45);
+}
+
+.roster-bar-track {
+    width: 100%;
+    height: 11px;
+    background-color: rgb(220, 215, 205);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-medium);
+    border-right-color: var(--border-paper-medium);
+    border-top-color: var(--border-paper-medium);
+    border-bottom-color: var(--border-paper-medium);
+    overflow: hidden;
+}
+
+.roster-bar-fill {
+    width: 0%;
+    height: 100%;
+    background-color: var(--color-rage-low);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    transition-property: width, background-color;
+    transition-duration: var(--motion-medium);
+    transition-timing-function: ease-out;
+}
+
+.roster-bar-fill--hot     { background-color: var(--color-rage-high); }
+.roster-bar-fill--flipped { background-color: var(--color-status-flipped); width: 100%; }
+.roster-bar-fill--locked  { background-color: var(--color-status-locked); }
+
+/* ---------- Hint Toast ----------
+
+   Rebuilt as a yellow sticky-note pill so it matches the paper world.
+   Subtle rotation sells the "scribbled note" feel. */
+
+.hint-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 14%;
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--surface-postit-yellow-soft);
+    padding: var(--space-2) var(--space-4);
+    border-top-left-radius: var(--radius-pill);
+    border-top-right-radius: var(--radius-pill);
+    border-bottom-left-radius: var(--radius-pill);
+    border-bottom-right-radius: var(--radius-pill);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--border-paper-medium);
+    border-right-color: var(--border-paper-medium);
+    border-top-color: var(--border-paper-medium);
+    border-bottom-color: var(--border-paper-medium);
+    translate: -50% 0;
+    rotate: -1deg;
+    transition-property: opacity, translate;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: ease-out;
+    opacity: 1;
+    /* Cap so long hints don't extend past screen edges on narrow viewports
+       (e.g. 4:3 1024x768 or undocked windows). The label below uses
+       white-space: normal so text wraps inside this cap. */
+    max-width: 70%;
+}
+
+.hint-toast--hidden {
+    opacity: 0;
+    translate: -50% 18px;
+}
+
+.hint-toast-icon {
+    width: 12px;
+    height: 12px;
+    background-color: var(--color-rage-low);
+    border-top-left-radius: 50%;
+    border-top-right-radius: 50%;
+    border-bottom-left-radius: 50%;
+    border-bottom-right-radius: 50%;
+    margin-right: var(--space-2);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(120, 90, 30, 0.45);
+    border-right-color: rgba(120, 90, 30, 0.45);
+    border-top-color: rgba(120, 90, 30, 0.45);
+    border-bottom-color: rgba(120, 90, 30, 0.45);
+}
+
+.hint-toast-label {
+    color: var(--color-ink-strong);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    /* Wrap inside the toast's max-width so long hints don't push the pill
+       past the screen edges. flex-shrink lets the label collapse before
+       overflowing. */
+    white-space: normal;
+    flex-shrink: 1;
+    -unity-text-align: middle-left;
+    letter-spacing: 0.3px;
+}
+
+/* ---------- Win Screen ----------
+
+   The main card layout / typography lives in primitives.uss
+   (.modal-card, .modal-card--md). Only HUD-specific decoration and
+   button row spacing remain here. */
+
+.win-screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-dimmer);
+    align-items: center;
+    justify-content: center;
+    transition-property: opacity;
+    transition-duration: var(--motion-slow);
+    transition-timing-function: ease-out;
+    opacity: 1;
+}
+
+.win-screen--hidden {
+    opacity: 0;
+    /* picking-mode toggled in code; keep visual collapse here */
+    display: none;
+}
+
+/* The card itself uses the .modal-card / .modal-card--md primitive in
+   UXML; this rule layers HUD-specific decoration (tape strips, padding
+   bump for the stamp row, slight rotation for the certificate feel). */
+.win-screen-card {
+    padding: var(--space-6) var(--space-6) var(--space-5) var(--space-6);
+    align-items: center;
+    overflow: visible;
+}
+
+/* Two pieces of decorative tape that "pin" the certificate to the world. */
+.win-screen-tape {
+    position: absolute;
+    width: 110px;
+    height: 38px;
+    background-image: resource('UI/Clipboard/tape_strip');
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: var(--decor-opacity-strong);
+}
+
+.win-screen-tape--left {
+    left: -22px;
+    top: -10px;
+    rotate: -16deg;
+}
+
+.win-screen-tape--right {
+    right: -22px;
+    top: -10px;
+    rotate: 16deg;
+}
+
+.win-screen-eyebrow {
+    color: var(--color-ink-muted);
+    font-size: var(--font-size-xs);
+    -unity-font-style: bold;
+    letter-spacing: 3px;
+    -unity-text-align: middle-center;
+    margin-bottom: var(--space-1);
+}
+
+.win-screen-title {
+    color: var(--color-ink-strong);
+    font-size: var(--font-size-display);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-bottom: var(--space-2);
+    letter-spacing: 4px;
+}
+
+.win-screen-stamp-row {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: var(--space-1);
+    margin-bottom: var(--space-3);
+}
+
+.win-screen-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: var(--space-2);
+}
+
+.win-screen-body {
+    color: var(--color-ink-medium);
+    font-size: var(--font-size-md);
+    -unity-text-align: middle-center;
+    margin-bottom: var(--space-3);
+    white-space: normal;
+    -unity-font-style: italic;
+}
+
+/* .win-screen-btn / --primary / --secondary now compose with .btn /
+   .btn--primary / .btn--secondary (added in UXML). Color and sizing
+   come from primitives.uss; this leaves only the screen-specific
+   horizontal margin so the button row breathes in narrow modal widths. */
+.win-screen-btn { margin: var(--space-1) var(--space-2); }
